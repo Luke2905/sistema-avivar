@@ -3,7 +3,7 @@ import { useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { X, Printer, User, Calendar, Box, ShoppingBag } from 'lucide-react';
 import { ImpressoPedido } from './ImpressoPedido';
-
+import { GerenciadorArtes } from '../components/GerenciadorArtes';
 // Interfaces alinhadas com o Banco de Dados (Maiúsculas)
 interface Item {
   ID_ITEM: number;
@@ -144,6 +144,8 @@ export default function ModalDetalhesPedido({ isOpen, dados, onClose }: Props) {
               </table>
             </div>
 
+            <h3 className="font-bold mb-2">Arquivos e Artes</h3>
+            <GerenciadorArtes idPedido={pedido.ID_PEDIDO} />
           </div>
 
           {/* Rodapé com Botões (Fixo embaixo) */}
@@ -161,7 +163,6 @@ export default function ModalDetalhesPedido({ isOpen, dados, onClose }: Props) {
               Fechar
             </button>
           </div>
-
         </div>
       </div>
     </>
