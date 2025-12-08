@@ -35,13 +35,13 @@ export const MENU_ITEMS: MenuItem[] = [
     icon: Printer, 
     roles: ['ADMIN', 'PRODUCAO'] 
   },
-  { 
-    section: 'Criação',
-    label: 'Arquivos de Arte', 
-    path: '/artes', 
-    icon: Palette, 
-    roles: ['ADMIN', 'ARTES'] 
-  },
+  // { 
+  //   section: 'Criação',
+  //   label: 'Arquivos de Arte', 
+  //   path: '/artes', 
+  //   icon: Palette, 
+  //   roles: ['ADMIN', 'ARTES'] 
+  // },
   { 
     section: 'Gestão',
     label: 'Pedidos', 
@@ -67,13 +67,13 @@ export const MENU_ITEMS: MenuItem[] = [
     icon: ShoppingBag, 
     roles: ['ADMIN', 'FINANCEIRO'] 
   },
-  { 
-    section: 'Estratégia',
-    label: 'Financeiro', 
-    path: '/relatorios', 
-    icon: DollarSign, 
-    roles: ['ADMIN', 'FINANCEIRO'] 
-  },
+  // { 
+  //   section: 'Estratégia',
+  //   label: 'Financeiro', 
+  //   path: '/relatorios', 
+  //   icon: DollarSign, 
+  //   roles: ['ADMIN', 'FINANCEIRO'] 
+  // },
   { 
     label: 'Previsões IA', 
     path: '/ia', 
