@@ -1,5 +1,6 @@
 // src/pages/Produtos.tsx
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect} from 'react';
+import type { FormEvent } from 'react'; // <--- Adicione "type"
 import { Plus, Package, Trash2, FlaskConical, AlertCircle } from 'lucide-react';
 import api from '../services/api';
 import MySwal, { showToast, showAlert } from '../utils/swal-config';

@@ -1,4 +1,5 @@
-import { useState, FormEvent } from 'react';
+import { useState } from 'react';
+import type { FormEvent } from 'react'; // <--- Adicione "type"
 import { useNavigate } from 'react-router-dom'; 
 import api from '../services/api';
 import { showToast, showAlert } from '../utils/swal-config';
