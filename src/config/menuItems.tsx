@@ -1,7 +1,7 @@
 // src/config/menuItems.tsx
 import { 
   LayoutDashboard, ShoppingCart, Package, Boxes, ShoppingBag, 
-  BarChart3, BrainCircuit, ScanBarcode, Printer, Palette, DollarSign
+  BarChart3, BrainCircuit, ScanBarcode, Printer, Palette, DollarSign, Users
 } from 'lucide-react';
 
 // USE SEM ACENTOS AQUI
@@ -80,4 +80,11 @@ export const MENU_ITEMS: MenuItem[] = [
     icon: BrainCircuit, 
     roles: ['ADMIN', 'FINANCEIRO'] 
   },
+  { 
+  section: 'Configurações',
+  label: 'Usuários', 
+  path: '/usuarios', 
+  icon: Users, // Importe o icone Users do lucide-react
+  roles: ['ADMIN'] 
+},
 ];

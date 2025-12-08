@@ -9,7 +9,7 @@ import Compras from './pages/Compras';
 import ProducaoScanner from './pages/ProducaoScanner';
 import Predicoes from './pages/Predicoes';
 import ProducaoGerar from './pages/ProducaoGerar';
-
+import Usuarios from './pages/Usuarios'
 // Guardião
 const RotaPrivada = () => {
   const token = localStorage.getItem('avivar_token');
@@ -33,6 +33,7 @@ function App() {
             <Route path="/pcp" element={<ProducaoGerar />} />
             <Route path="/scanner" element={<ProducaoScanner />} />
             <Route path="/ia" element={<Predicoes />} />
+            <Route path="/usuarios" element={<Usuarios />} />
         </Route>
 
         {/* Fallback para rota inexistente */}
