@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'https://api-avivar.onrender.com/api', // O endereço do nosso Back-end
+    baseURL: 'https://api-avivar.onrender.com/api', // O endereço do Back-end
    // baseURL: 'http://localhost:3000/api',
 });
 

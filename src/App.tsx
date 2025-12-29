@@ -10,6 +10,9 @@ import ProducaoScanner from './pages/ProducaoScanner';
 import Predicoes from './pages/Predicoes';
 import ProducaoGerar from './pages/ProducaoGerar';
 import Usuarios from './pages/Usuarios'
+import Financeiro from './pages/Financeiro';
+import Despesas from './pages/Despesas';
+
 // Guardião
 const RotaPrivada = () => {
   const token = localStorage.getItem('avivar_token');
@@ -30,6 +33,8 @@ function App() {
             <Route path="/pedidos-lista" element={<PedidosLista />} />
             <Route path="/estoque" element={<Estoque />} />
             <Route path="/compras" element={<Compras />} />
+            <Route path="/financeiro" element={<Financeiro />} />
+            <Route path="/despesa" element={<Despesas />} />
             <Route path="/pcp" element={<ProducaoGerar />} />
             <Route path="/scanner" element={<ProducaoScanner />} />
             <Route path="/ia" element={<Predicoes />} />

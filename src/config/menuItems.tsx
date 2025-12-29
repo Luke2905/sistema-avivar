@@ -1,7 +1,7 @@
 // src/config/menuItems.tsx
 import { 
   LayoutDashboard, ShoppingCart, Package, Boxes, ShoppingBag, 
-  BarChart3, BrainCircuit, ScanBarcode, Printer, Palette, DollarSign, Users
+  BarChart3, BrainCircuit, ScanBarcode, Printer, Palette, DollarSign, Users, HandCoins
 } from 'lucide-react';
 
 // USE SEM ACENTOS AQUI
@@ -23,18 +23,18 @@ export const MENU_ITEMS: MenuItem[] = [
     icon: LayoutDashboard, 
     roles: ['ADMIN', 'PRODUCAO', 'ARTES', 'FINANCEIRO'] 
   },
-  { 
-    label: 'Terminal (Bipe)', 
-    path: '/scanner', 
-    icon: ScanBarcode, 
-    roles: ['ADMIN', 'PRODUCAO'] 
-  },
-  { 
-    label: 'Central de OPs', 
-    path: '/pcp', 
-    icon: Printer, 
-    roles: ['ADMIN', 'PRODUCAO'] 
-  },
+  // { 
+  //   label: 'Terminal (Bipe)', 
+  //   path: '/scanner', 
+  //   icon: ScanBarcode, 
+  //   roles: ['ADMIN', 'PRODUCAO'] 
+  // },
+  // { 
+  //   label: 'Central de OPs', 
+  //   path: '/pcp', 
+  //   icon: Printer, 
+  //   roles: ['ADMIN', 'PRODUCAO'] 
+  // },
   // { 
   //   section: 'Criação',
   //   label: 'Arquivos de Arte', 
@@ -67,13 +67,19 @@ export const MENU_ITEMS: MenuItem[] = [
     icon: ShoppingBag, 
     roles: ['ADMIN', 'FINANCEIRO'] 
   },
-  // { 
-  //   section: 'Estratégia',
-  //   label: 'Financeiro', 
-  //   path: '/relatorios', 
-  //   icon: DollarSign, 
-  //   roles: ['ADMIN', 'FINANCEIRO'] 
-  // },
+    { 
+    label: 'Despesas', 
+    path: '/despesa', 
+    icon: HandCoins, 
+    roles: ['ADMIN', 'FINANCEIRO'] 
+  },
+  { 
+    section: 'Estratégia',
+    label: 'Financeiro', 
+    path: '/financeiro', 
+    icon: DollarSign, 
+    roles: ['ADMIN', 'FINANCEIRO'] 
+  },
   { 
     label: 'Previsões IA', 
     path: '/ia', 

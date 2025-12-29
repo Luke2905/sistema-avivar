@@ -1,28 +1,45 @@
+import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import Sidebar from './Sidebar';
+import Sidebar from '../components/Sidebar';
 
 export default function Layout() {
-  // 🐛 CORREÇÃO CRÍTICA:
-  // Antes estava lendo 'usuario', mas o Login salva como 'avivar_user'.
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+
   const usuarioSalvo = localStorage.getItem('avivar_user');
-  
   const user = usuarioSalvo ? JSON.parse(usuarioSalvo) : { nome: 'Visitante', perfil: '' };
 
-  // Tratamento do perfil (Maiúsculo e sem acento)
   let perfilTratado = user.perfil || '';
-  // Garante que é string antes de normalizar para evitar crash se vier null
   if (perfilTratado) {
       perfilTratado = perfilTratado.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 font-sans">
+    // 1. h-screen: Força a altura exata da janela
+    // 2. overflow-hidden: Impede que a JANELA role. Só os filhos rolam.
+    <div className="flex h-screen w-screen overflow-hidden bg-gray-50 font-sans">
       
-      {/* Sidebar recebe o perfil correto agora */}
-      <Sidebar userRole={perfilTratado} userName={user.nome || 'Usuário'} />
+      <Sidebar 
+        userRole={perfilTratado} 
+        userName={user.nome || 'Usuário'} 
+        isCollapsed={isSidebarCollapsed}
+        toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+      />
 
-      {/* Conteúdo Principal */}
-      <main className="flex-1 ml-64 overflow-auto bg-gray-50 h-full relative p-0">
+      {/* CONTEÚDO PRINCIPAL */}
+      <main 
+        className={`
+          flex-1 h-full relative
+          transition-all duration-300 ease-in-out
+          ${isSidebarCollapsed ? 'ml-20' : 'ml-64'} 
+          
+          /* AQUI O PULO DO GATO: */
+          /* Removemos 'overflow-auto' DAQUI. */
+          /* Quem deve rolar é o componente filho (Dashboard/Estoque) ou um div interno. */
+          /* Se deixar auto aqui e no filho, cria duas barras de rolagem. */
+          overflow-hidden 
+        `}
+      >
+        {/* O Outlet vai renderizar o Dashboard, que já tem 'h-full' e controle de scroll interno */}
         <Outlet />
       </main>
     </div>

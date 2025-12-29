@@ -2,22 +2,34 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Estilo global básico */
-body {
-  @apply bg-gray-50 text-gray-800;
+/* --- AQUI ESTÁ A CORREÇÃO --- */
+/* Força a aplicação a ocupar exatos 100% da tela e proíbe scroll na janela */
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Mata o scrollbar principal */
+  overscroll-behavior: none; /* Mata o efeito elástico do Mac/Touch */
 }
 
-/* Scrollbar personalizada e sutil */
+/* Estilo global básico */
+body {
+  @apply bg-gray-50 text-gray-800 font-sans;
+}
+
+/* Scrollbar personalizada para os CONTAINERS INTERNOS */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
+  height: 6px; /* Importante para scroll horizontal do Kanban */
 }
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #e2e8f0;
+  background-color: #cbd5e0;
   border-radius: 20px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: #cbd5e0;
+  background-color: #a0aec0;
 }

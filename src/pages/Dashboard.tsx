@@ -1,11 +1,10 @@
-// src/pages/Dashboard.tsx
 import { useState, useEffect } from 'react';
-import { RefreshCw, PlusCircle, ArrowRight, ArrowLeft, Box, User, AlertTriangle } from 'lucide-react';
+import { RefreshCw, ArrowRight, ArrowLeft, Box, User } from 'lucide-react'; // Ícones
 import api from '../services/api';
 import { showAlert, showToast } from '../utils/swal-config';
 import ModalNovoPedido from '../components/ModalNovoPedido';
 
-// Interface alinhada com o Banco de Dados (Maiúsculas)
+// Interface
 interface Pedido {
   ID_PEDIDO: number;
   NOME_CLIENTE: string;
@@ -13,13 +12,12 @@ interface Pedido {
   VALOR_TOTAL: string;
   STATUS_PEDIDO: string;
   DATA_PEDIDO: string;
-  RESPONSAVEL_PRODUCAO?: string; // Nome do operador que bipou (Scanner)
-  resumo_itens?: string; // Alias criado no SQL para mostrar "2x Caneca, 1x Camiseta"
+  RESPONSAVEL_PRODUCAO?: string;
+  resumo_itens?: string;
 }
 
 const FASES_ORDEM = ['ENTRADA', 'AGUARDANDO_ARTE', 'CRIACAO', 'IMPRIMINDO', 'PRODUCAO', 'ENVIADO', 'CANCELADO'];
 
-// Configuração Visual das Colunas (Cores)
 const FASES_KANBAN = [
   { id: 'ENTRADA', titulo: 'Entrada', style: 'bg-slate-100 text-slate-700 border-slate-300' },
   { id: 'AGUARDANDO_ARTE', titulo: 'Aguardando Arte', style: 'bg-amber-100 text-amber-800 border-amber-300' },
@@ -49,35 +47,43 @@ export default function Dashboard() {
     }
   }
 
-  // --- LÓGICA DE MOVIMENTAÇÃO COM AUTOMAÇÃO ---
+  // --- LÓGICA DE MOVIMENTAÇÃO INTELIGENTE ---
 
   async function avancarFase(pedido: Pedido) {
     const indexAtual = FASES_ORDEM.indexOf(pedido.STATUS_PEDIDO);
-    if (indexAtual >= FASES_ORDEM.length - 2) return; // Trava antes de Cancelado
+    if (indexAtual >= FASES_ORDEM.length - 2) return; // Trava fim da linha
 
     const proximaFase = FASES_ORDEM[indexAtual + 1];
 
-    // 🏭 GATILHO DE ESTOQUE (FASE 6)
-    // Se o destino for PRODUÇÃO, tentamos baixar o estoque antes de mover
-    if (proximaFase === 'PRODUCAO') {
+    // 🛑 PEDÁGIO DE ESTOQUE: SAINDO DA PRODUÇÃO 🛑
+    if (pedido.STATUS_PEDIDO === 'PRODUCAO') {
         try {
-            showToast('Verificando estoque...', 'info');
+            showToast('Finalizando produção e baixando estoque...', 'info');
+
+            // Tenta dar baixa no estoque
+            const res = await api.post(`/producao/${pedido.ID_PEDIDO}/baixar-estoque`);
             
-            // Chama a API de baixa (Explosão de materiais)
-            const resBaixa = await api.post(`/producao/${pedido.ID_PEDIDO}/baixar-estoque`);
-            
-            showToast(`Estoque baixado! ${resBaixa.data.insumos_baixados || 0} itens consumidos.`, 'success');
-            
-            // Se a baixa funcionou, atualiza o status visualmente
+            // Se chegou aqui, deu certo!
+            const qtdBaixada = res.data.insumos_baixados || 'vários';
+            showToast(`Sucesso! ${qtdBaixada} insumos baixados.`, 'success');
+
+            // AGORA sim, move para "ENVIADO"
             atualizarStatus(pedido, proximaFase, 'forward');
-            
+
         } catch (error: any) {
-            // Se der erro (ex: falta material), bloqueia o movimento e avisa
-            const msg = error.response?.data?.mensagem || 'Erro desconhecido ao baixar estoque.';
-            showAlert('Bloqueio de Produção 🛑', `Não foi possível iniciar a produção:\n${msg}`, 'error');
+            // Se der erro (ex: Estoque insuficiente), cai aqui e NÃO avança
+            console.error(error);
+            const msgErro = error.response?.data?.mensagem || 'Erro desconhecido.';
+            
+            // Alerta visual bonito travando a operação
+            showAlert(
+                'Estoque Insuficiente 🚫', 
+                `Não foi possível finalizar a produção.\n\nMotivo: ${msgErro}`, 
+                'error'
+            );
         }
     } else {
-        // Para qualquer outra fase, move normal
+        // Se NÃO for fase de produção, vida que segue normal
         atualizarStatus(pedido, proximaFase, 'forward');
     }
   }
@@ -89,7 +95,6 @@ export default function Dashboard() {
     atualizarStatus(pedido, faseAnterior, 'back');
   }
 
-  // Função genérica que chama a API de PATCH status e atualiza o estado local
   async function atualizarStatus(pedido: Pedido, novaFase: string, direcao: 'forward' | 'back') {
     try {
       await api.patch(`/pedidos/${pedido.ID_PEDIDO}/status`, { novo_status: novaFase });
@@ -101,30 +106,27 @@ export default function Dashboard() {
       if (direcao === 'back') showToast(`Voltou para ${novaFase.replace('_', ' ')}`);
       
     } catch (error) {
-      showAlert('Erro', 'Não foi possível mover o pedido.', 'error');
+      showAlert('Erro', 'Não foi possível mover o pedido no servidor.', 'error');
     }
   }
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
       
-      {/* --- CABEÇALHO --- */}
+      {/* CABEÇALHO */}
       <header className="bg-white border-b border-gray-200 px-8 py-4 flex justify-between items-center sticky top-0 z-10 shadow-sm">
         <div>
           <h2 className="text-xl font-bold text-gray-800">Painel de Produção</h2>
           <p className="text-xs text-gray-500">Acompanhamento de chão de fábrica</p>
         </div>
         <div className="flex gap-2">
-            {/* <button onClick={() => setModalNovoOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-avivar-pink text-white rounded-lg hover:bg-pink-600 transition-colors font-medium text-sm shadow-md">
-              <PlusCircle size={18} /> Novo Pedido
-            </button> */}
             <button onClick={carregarPedidos} className="p-2 text-gray-400 hover:text-avivar-tiffany hover:bg-gray-50 rounded-full transition-all">
               <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
             </button>
         </div>
       </header>
 
-      {/* --- KANBAN BOARD --- */}
+      {/* KANBAN BOARD */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden p-6 custom-scrollbar">
         <div className="flex gap-4 h-full min-w-max">
           {FASES_KANBAN.map((fase) => {
@@ -133,7 +135,7 @@ export default function Dashboard() {
             return (
               <div key={fase.id} className="w-[320px] flex flex-col bg-gray-100/50 rounded-xl max-h-full border border-gray-200 shadow-sm">
                 
-                {/* Título da Coluna Colorido */}
+                {/* Título Coluna */}
                 <div className={`p-3 flex justify-between items-center border-b-2 rounded-t-xl ${fase.style}`}>
                   <h3 className="font-bold text-sm uppercase tracking-wide flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full bg-current opacity-50`}></div>
@@ -144,13 +146,13 @@ export default function Dashboard() {
                   </span>
                 </div>
 
-                {/* Área de Cards */}
+                {/* Lista de Cards */}
                 <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
                   {pedidosDaFase.map((pedido) => (
                     
                     <div key={pedido.ID_PEDIDO} className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-all group relative flex flex-col gap-2">
                       
-                      {/* Linha 1: ID e Data */}
+                      {/* Topo Card */}
                       <div className="flex justify-between items-start">
                         <span className="text-[10px] font-bold bg-gray-50 text-gray-500 px-2 py-1 rounded border border-gray-200">
                           #{pedido.NUM_PEDIDO_PLATAFORMA || 'BALCÃO'}
@@ -160,7 +162,7 @@ export default function Dashboard() {
                         </span>
                       </div>
 
-                      {/* Linha 2: Cliente */}
+                      {/* Cliente */}
                       <div className="flex items-center gap-2">
                         <User size={14} className="text-gray-400" />
                         <h4 className="font-bold text-gray-800 text-sm line-clamp-1" title={pedido.NOME_CLIENTE}>
@@ -168,7 +170,7 @@ export default function Dashboard() {
                         </h4>
                       </div>
 
-                      {/* ✨ DESTAQUE DE PRODUÇÃO (QUEM ESTÁ FAZENDO) ✨ */}
+                      {/* Destaque Responsável */}
                       {pedido.STATUS_PEDIDO === 'PRODUCAO' && pedido.RESPONSAVEL_PRODUCAO && (
                         <div className="flex items-center gap-2 bg-orange-50 p-1.5 rounded border border-orange-200 animate-pulse">
                             <div className="w-5 h-5 rounded-full bg-orange-500 text-white flex items-center justify-center text-[10px] font-bold shadow-sm">
@@ -180,7 +182,7 @@ export default function Dashboard() {
                         </div>
                       )}
 
-                      {/* Linha 3: Resumo de Itens (Foco na Produção) */}
+                      {/* Resumo Itens */}
                       <div className="bg-blue-50/50 p-2 rounded border border-blue-100 mt-1">
                         <div className="flex items-start gap-2">
                             <Box size={14} className="text-avivar-tiffany mt-0.5 shrink-0" />
@@ -190,7 +192,7 @@ export default function Dashboard() {
                         </div>
                       </div>
 
-                      {/* Linha 4: Botões de Ação */}
+                      {/* Botões Ação */}
                       <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-50">
                         
                         {/* Voltar */}
@@ -199,20 +201,19 @@ export default function Dashboard() {
                                 <button 
                                     onClick={(e) => { e.stopPropagation(); voltarFase(pedido); }}
                                     className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                                    title="Voltar fase"
                                 >
                                     <ArrowLeft size={18} />
                                 </button>
                             )}
                         </div>
 
-                        {/* Avançar (Com gatilho de estoque se for p/ Produção) */}
+                        {/* Avançar (Com lógica de baixa ao sair da produção) */}
                         <div className="h-8 w-8">
                             {fase.id !== 'ENVIADO' && (
                                 <button 
                                     onClick={(e) => { e.stopPropagation(); avancarFase(pedido); }}
                                     className="p-1.5 text-gray-400 hover:text-avivar-tiffany hover:bg-teal-50 rounded-full transition-colors"
-                                    title={fase.id === 'IMPRIMINDO' ? 'Iniciar Produção (Baixar Estoque)' : 'Avançar fase'}
+                                    title={fase.id === 'PRODUCAO' ? 'Finalizar e Baixar Estoque' : 'Avançar fase'}
                                 >
                                     <ArrowRight size={18} />
                                 </button>
@@ -223,7 +224,7 @@ export default function Dashboard() {
                     </div>
                   ))}
                   
-                  {/* Estado Vazio da Coluna */}
+                  {/* Vazio */}
                   {pedidosDaFase.length === 0 && (
                     <div className="text-center py-4 opacity-50 border-2 border-dashed border-gray-200 rounded-lg">
                         <p className="text-xs text-gray-400">Vazio</p>
@@ -236,7 +237,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Modal para Criar Pedido Rápido */}
       <ModalNovoPedido 
         isOpen={modalNovoOpen} 
         onClose={() => setModalNovoOpen(false)}

@@ -1,115 +1,183 @@
 // src/components/ModalNovoInsumo.tsx
-import { useState } from 'react';
-import { X, Save, Package } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Save } from 'lucide-react';
 import api from '../services/api';
 import { showToast } from '../utils/swal-config';
+
+// Interface igual à do Estoque.tsx
+interface Materia {
+  ID_MATERIA: number;
+  SKU_MATERIA: string;
+  NOME_MATERIA: string;
+  UNIDADE_MEDIDA: string;
+  CUSTO_UNITARIO: string | number;
+  SALDO_ESTOQUE: string | number;
+  ESTOQUE_MINIMO: string | number;
+  FORNECEDOR: string;
+}
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  insumoParaEditar: Materia | null; // Nova prop!
 }
 
-export default function ModalNovoInsumo({ isOpen, onClose, onSuccess }: Props) {
-  const [sku, setSku] = useState('');
-  const [nome, setNome] = useState('');
-  const [unidade, setUnidade] = useState('');
-  const [minimo, setMinimo] = useState('');
-  const [custo, setCusto] = useState('');
-  const [fornecedor, setFornecedor] = useState('');
+export default function ModalNovoInsumo({ isOpen, onClose, onSuccess, insumoParaEditar }: Props) {
+  const [loading, setLoading] = useState(false);
+  
+  // Estado do formulário
+  const [form, setForm] = useState({
+    sku: '',
+    nome: '',
+    unidade: 'UN',
+    custo: '',
+    estoque_min: '',
+    fornecedor: ''
+  });
 
-  const handleSalvar = async () => {
-    if (!sku || !nome || !custo) return showToast('Preencha os campos obrigatórios', 'error');
-
-    try {
-      await api.post('/estoque', {
-        sku,
-        nome,
-        unidade,
-        estoque_min: minimo,
-        custo: parseFloat(custo),
-        fornecedor
-      });
-
-      showToast('Insumo cadastrado com sucesso!');
-      onSuccess(); // Atualiza a lista lá no pai
-      onClose();   // Fecha o modal
-      
-      // Limpar campos
-      setSku(''); setNome(''); setUnidade(''); setMinimo(''); setCusto(''); setFornecedor('');
-      
-    } catch (error) {
-      showToast('Erro ao salvar insumo', 'error');
+  // EFEITO MÁGICO: Quando o modal abre, verifica se é Edição ou Novo
+  useEffect(() => {
+    if (isOpen) {
+      if (insumoParaEditar) {
+        // MODO EDIÇÃO: Preenche com os dados que vieram do banco
+        setForm({
+          sku: insumoParaEditar.SKU_MATERIA,
+          nome: insumoParaEditar.NOME_MATERIA,
+          unidade: insumoParaEditar.UNIDADE_MEDIDA,
+          custo: String(insumoParaEditar.CUSTO_UNITARIO),
+          estoque_min: String(insumoParaEditar.ESTOQUE_MINIMO),
+          fornecedor: insumoParaEditar.FORNECEDOR || ''
+        });
+      } else {
+        // MODO NOVO: Limpa tudo
+        setForm({ sku: '', nome: '', unidade: 'UN', custo: '', estoque_min: '', fornecedor: '' });
+      }
     }
-  };
+  }, [isOpen, insumoParaEditar]);
 
   if (!isOpen) return null;
 
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      if (insumoParaEditar) {
+        // --- ATUALIZAR (PUT) ---
+        await api.put(`/estoque/${insumoParaEditar.ID_MATERIA}`, form);
+        showToast('Insumo atualizado com sucesso!', 'success');
+      } else {
+        // --- CRIAR (POST) ---
+        await api.post('/estoque', form);
+        showToast('Insumo cadastrado com sucesso!', 'success');
+      }
+      
+      onSuccess(); // Recarrega a lista lá no pai
+      onClose();   // Fecha o modal
+
+    } catch (error: any) {
+      console.error(error);
+      const msg = error.response?.data?.mensagem || 'Erro ao salvar.';
+      showToast(msg, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg animate-in fade-in zoom-in duration-200">
         
-        {/* Cabeçalho */}
-        <div className="bg-avivar-tiffany p-5 flex justify-between items-center text-white">
-          <h2 className="text-lg font-bold flex items-center gap-2">
-            <Package size={20} /> Novo Insumo
+        <div className="flex justify-between items-center p-5 border-b border-gray-100 bg-gray-50 rounded-t-xl">
+          <h2 className="text-xl font-bold text-gray-700">
+            {insumoParaEditar ? 'Editar Insumo' : 'Novo Insumo'}
           </h2>
-          <button onClick={onClose} className="text-white/80 hover:text-white p-1 rounded-full hover:bg-white/20 transition-colors">
-            <X size={20} />
+          <button onClick={onClose} className="text-gray-400 hover:text-red-500 transition-colors">
+            <X size={24} />
           </button>
         </div>
 
-        {/* Corpo do Formulário */}
-        <div className="p-6 space-y-4">
-          
-          {/* Linha 1: SKU e Nome */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="col-span-1">
-              <label className="block text-xs font-bold text-gray-500 mb-1">SKU</label>
-              <input value={sku} onChange={e => setSku(e.target.value)} className="w-full border rounded-lg p-2 text-sm focus:border-avivar-tiffany outline-none" placeholder="MP-01" />
-            </div>
-            <div className="col-span-2">
-              <label className="block text-xs font-bold text-gray-500 mb-1">Nome do Material</label>
-              <input value={nome} onChange={e => setNome(e.target.value)} className="w-full border rounded-lg p-2 text-sm focus:border-avivar-tiffany outline-none" placeholder="Ex: Tinta Sublimática" />
-            </div>
-          </div>
-
-          {/* Linha 2: Unidade e Estoque Mínimo */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-gray-500 mb-1">Unidade (Kg, L, Un)</label>
-              <input value={unidade} onChange={e => setUnidade(e.target.value)} className="w-full border rounded-lg p-2 text-sm focus:border-avivar-tiffany outline-none" placeholder="Ex: Litro" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">SKU (Código)</label>
+              <input 
+                required
+                value={form.sku}
+                onChange={e => setForm({...form, sku: e.target.value})}
+                className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-avivar-tiffany outline-none uppercase"
+                placeholder="EX: PAP-001"
+              />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-500 mb-1">Estoque Mínimo (Alerta)</label>
-              <input type="number" value={minimo} onChange={e => setMinimo(e.target.value)} className="w-full border rounded-lg p-2 text-sm focus:border-avivar-tiffany outline-none" placeholder="Ex: 5" />
+               <label className="block text-sm font-medium text-gray-700 mb-1">Unidade</label>
+               <select 
+                 value={form.unidade}
+                 onChange={e => setForm({...form, unidade: e.target.value})}
+                 className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-avivar-tiffany outline-none"
+               >
+                 <option value="UN">Unidade (UN)</option>
+                 <option value="KG">Quilo (KG)</option>
+                 <option value="MT">Metro (MT)</option>
+                 <option value="L">Litro (L)</option>
+                 <option value="M2">Metro² (M²)</option>
+               </select>
             </div>
           </div>
 
-          {/* Linha 3: Custo e Fornecedor */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Insumo</label>
+            <input 
+              required
+              value={form.nome}
+              onChange={e => setForm({...form, nome: e.target.value})}
+              className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-avivar-tiffany outline-none"
+              placeholder="Ex: Papel Paraná 2mm"
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
              <div>
-              <label className="block text-xs font-bold text-gray-500 mb-1">Custo Unitário (R$)</label>
-              <input type="number" step="0.01" value={custo} onChange={e => setCusto(e.target.value)} className="w-full border rounded-lg p-2 text-sm focus:border-avivar-tiffany outline-none" placeholder="0.00" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-500 mb-1">Fornecedor</label>
-              <input value={fornecedor} onChange={e => setFornecedor(e.target.value)} className="w-full border rounded-lg p-2 text-sm focus:border-avivar-tiffany outline-none" placeholder="Nome do Fornecedor" />
-            </div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Custo Unit. (R$)</label>
+                <input 
+                  type="number" step="0.01" min="0"
+                  required
+                  value={form.custo}
+                  onChange={e => setForm({...form, custo: e.target.value})}
+                  className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-avivar-tiffany outline-none"
+                />
+             </div>
+             <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Estoque Mínimo</label>
+                <input 
+                  type="number" min="0"
+                  value={form.estoque_min}
+                  onChange={e => setForm({...form, estoque_min: e.target.value})}
+                  className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-avivar-tiffany outline-none"
+                />
+             </div>
           </div>
 
-        </div>
+          <div>
+             <label className="block text-sm font-medium text-gray-700 mb-1">Fornecedor Principal</label>
+             <input 
+               value={form.fornecedor}
+               onChange={e => setForm({...form, fornecedor: e.target.value})}
+               className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-avivar-tiffany outline-none"
+               placeholder="Nome da empresa..."
+             />
+          </div>
 
-        {/* Rodapé */}
-        <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
-          <button onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors">
-            Cancelar
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="w-full bg-avivar-tiffany text-white py-3 rounded-lg font-bold hover:bg-teal-600 transition-colors flex justify-center items-center gap-2 mt-4 shadow-md"
+          >
+             <Save size={20} />
+             {loading ? 'Salvando...' : (insumoParaEditar ? 'Atualizar Dados' : 'Cadastrar Insumo')}
           </button>
-          <button onClick={handleSalvar} className="px-4 py-2 bg-avivar-tiffany text-white rounded-lg hover:bg-teal-600 text-sm font-bold shadow-sm flex items-center gap-2 transition-colors">
-            <Save size={16} /> Salvar Insumo
-          </button>
-        </div>
-
+        </form>
       </div>
     </div>
   );
