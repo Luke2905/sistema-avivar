@@ -1,6 +1,6 @@
 // src/components/ModalNovoPedido.tsx
 import { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Search, Save } from 'lucide-react';
+import { X, Trash2, Search, Save } from 'lucide-react';
 import api from '../services/api';
 import { showToast } from '../utils/swal-config';
 
@@ -18,6 +18,8 @@ export default function ModalNovoPedido({ isOpen, onClose, onSuccess, pedidoPara
   const [cliente, setCliente] = useState('');
   const [numPedido, setNumPedido] = useState('');
   const [plataforma, setPlataforma] = useState('Balcão');
+  const [prazoEnvio, setPrazoEnvio] = useState('');
+  const [linkArte, setLinkArte] = useState('');
   
   // Itens do Pedido
   const [itens, setItens] = useState<any[]>([]);
@@ -37,6 +39,13 @@ export default function ModalNovoPedido({ isOpen, onClose, onSuccess, pedidoPara
             setCliente(p.NOME_CLIENTE);
             setNumPedido(p.NUM_PEDIDO_PLATAFORMA);
             setPlataforma(p.PLATAFORMA_ORIGEM);
+            
+            if (p.PRAZO_ENVIO) {
+                setPrazoEnvio(p.PRAZO_ENVIO.split('T')[0]);
+            } else {
+                setPrazoEnvio('');
+            }
+            setLinkArte(p.LINK_ARTE || '');
             
             // Mapeia os itens do banco para o formato do state local
             const itensFormatados = listaItens.map((item: any) => ({
@@ -60,6 +69,8 @@ export default function ModalNovoPedido({ isOpen, onClose, onSuccess, pedidoPara
     setCliente('');
     setNumPedido('');
     setPlataforma('Balcão');
+    setPrazoEnvio('');
+    setLinkArte('');
     setItens([]);
     setBuscaProduto('');
     setProdutosEncontrados([]);
@@ -122,6 +133,8 @@ export default function ModalNovoPedido({ isOpen, onClose, onSuccess, pedidoPara
       nome_cliente: cliente,
       num_pedido: numPedido,
       plataforma: plataforma,
+      prazo_envio: prazoEnvio || null,
+      link_arte: linkArte || null,
       valor_total: calcularTotalPedido(), // Recalcula no front só pra garantir, mas back deve validar
       itens: itens.map(i => ({
         id_produto: i.id_produto,
@@ -198,6 +211,25 @@ export default function ModalNovoPedido({ isOpen, onClose, onSuccess, pedidoPara
                 <option value="Elo7">Elo7</option>
                 <option value="Instagram">Instagram / WhatsApp</option>
               </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1">Prazo de Envio</label>
+              <input 
+                type="date"
+                value={prazoEnvio} onChange={e => setPrazoEnvio(e.target.value)}
+                className="w-full border p-2 rounded-lg outline-none focus:border-avivar-tiffany"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1">Link da Arte (Drive)</label>
+              <input 
+                type="text"
+                value={linkArte} onChange={e => setLinkArte(e.target.value)}
+                className="w-full border p-2 rounded-lg outline-none focus:border-avivar-tiffany"
+                placeholder="https://drive.google.com/..."
+              />
             </div>
           </div>
 

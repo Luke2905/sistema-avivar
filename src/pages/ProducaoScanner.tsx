@@ -1,6 +1,6 @@
 // src/pages/ProducaoScanner.tsx
 import { useState, useRef, useEffect } from 'react';
-import { ScanBarcode, PackageCheck, AlertTriangle, ListTodo, User, Clock, Eye, Factory } from 'lucide-react';
+import { ScanBarcode, PackageCheck, AlertTriangle, ListTodo, Clock, Eye, Factory } from 'lucide-react';
 import api from '../services/api';
 import ModalDetalhesProducao from '../components/ModalDetalhesProducao';
 

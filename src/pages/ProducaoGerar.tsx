@@ -1,6 +1,6 @@
 // src/pages/ProducaoGerar.tsx
 import { useState, useEffect } from 'react';
-import { Printer, FileText, Trash2, RefreshCw, AlertCircle, CheckCircle, Clock, Play } from 'lucide-react';
+import { Printer, FileText, Trash2, RefreshCw, AlertCircle, CheckCircle, Play } from 'lucide-react';
 import api from '../services/api';
 import MySwal, { showToast } from '../utils/swal-config';
 

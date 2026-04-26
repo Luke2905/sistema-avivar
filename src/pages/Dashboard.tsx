@@ -14,6 +14,8 @@ interface Pedido {
   DATA_PEDIDO: string;
   RESPONSAVEL_PRODUCAO?: string;
   resumo_itens?: string;
+  PRAZO_ENVIO?: string;
+  LINK_ARTE?: string;
 }
 
 const FASES_ORDEM = ['ENTRADA', 'AGUARDANDO_ARTE', 'CRIACAO', 'IMPRIMINDO', 'PRODUCAO', 'ENVIADO', 'CANCELADO'];
@@ -32,6 +34,10 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [modalNovoOpen, setModalNovoOpen] = useState(false);
 
+  // Estados Drag and Drop
+  const [draggedPedidoId, setDraggedPedidoId] = useState<number | null>(null);
+  const [dragOverFase, setDragOverFase] = useState<string | null>(null);
+
   useEffect(() => { carregarPedidos(); }, []);
 
   async function carregarPedidos() {
@@ -47,52 +53,71 @@ export default function Dashboard() {
     }
   }
 
-  // --- LÓGICA DE MOVIMENTAÇÃO INTELIGENTE ---
+  // --- LÓGICA DE MOVIMENTAÇÃO INTELIGENTE E DRAG & DROP ---
 
-  async function avancarFase(pedido: Pedido) {
+  const handleDragStart = (e: React.DragEvent, pedidoId: number) => {
+    setDraggedPedidoId(pedidoId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, faseId: string) => {
+    e.preventDefault(); 
+    if (dragOverFase !== faseId) setDragOverFase(faseId);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOverFase(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, novaFase: string) => {
+    e.preventDefault();
+    setDragOverFase(null);
+
+    if (!draggedPedidoId) return;
+
+    const pedido = pedidos.find(p => p.ID_PEDIDO === draggedPedidoId);
+    setDraggedPedidoId(null);
+
+    if (!pedido || pedido.STATUS_PEDIDO === novaFase) return;
+    
+    processarMovimentacao(pedido, novaFase);
+  };
+
+  async function processarMovimentacao(pedido: Pedido, novaFase: string) {
     const indexAtual = FASES_ORDEM.indexOf(pedido.STATUS_PEDIDO);
-    if (indexAtual >= FASES_ORDEM.length - 2) return; // Trava fim da linha
+    const indexNovo = FASES_ORDEM.indexOf(novaFase);
+    const direcao = indexNovo > indexAtual ? 'forward' : 'back';
 
-    const proximaFase = FASES_ORDEM[indexAtual + 1];
-
-    // 🛑 PEDÁGIO DE ESTOQUE: SAINDO DA PRODUÇÃO 🛑
-    if (pedido.STATUS_PEDIDO === 'PRODUCAO') {
+    // 🛑 PEDÁGIO DE ESTOQUE: SAINDO DA PRODUÇÃO PARA FRENTE 🛑
+    if (pedido.STATUS_PEDIDO === 'PRODUCAO' && indexNovo > indexAtual) {
         try {
             showToast('Finalizando produção e baixando estoque...', 'info');
-
-            // Tenta dar baixa no estoque
             const res = await api.post(`/producao/${pedido.ID_PEDIDO}/baixar-estoque`);
-            
-            // Se chegou aqui, deu certo!
             const qtdBaixada = res.data.insumos_baixados || 'vários';
             showToast(`Sucesso! ${qtdBaixada} insumos baixados.`, 'success');
-
-            // AGORA sim, move para "ENVIADO"
-            atualizarStatus(pedido, proximaFase, 'forward');
-
+            atualizarStatus(pedido, novaFase, direcao);
         } catch (error: any) {
-            // Se der erro (ex: Estoque insuficiente), cai aqui e NÃO avança
             console.error(error);
             const msgErro = error.response?.data?.mensagem || 'Erro desconhecido.';
-            
-            // Alerta visual bonito travando a operação
-            showAlert(
-                'Estoque Insuficiente 🚫', 
-                `Não foi possível finalizar a produção.\n\nMotivo: ${msgErro}`, 
-                'error'
-            );
+            showAlert('Estoque Insuficiente 🚫', `Não foi possível finalizar a produção.\n\nMotivo: ${msgErro}`, 'error');
         }
     } else {
-        // Se NÃO for fase de produção, vida que segue normal
-        atualizarStatus(pedido, proximaFase, 'forward');
+        atualizarStatus(pedido, novaFase, direcao);
     }
+  }
+
+  // Compatibilidade com botões de setinha
+  async function avancarFase(pedido: Pedido) {
+    const indexAtual = FASES_ORDEM.indexOf(pedido.STATUS_PEDIDO);
+    if (indexAtual >= FASES_ORDEM.length - 2) return;
+    processarMovimentacao(pedido, FASES_ORDEM[indexAtual + 1]);
   }
 
   async function voltarFase(pedido: Pedido) {
     const indexAtual = FASES_ORDEM.indexOf(pedido.STATUS_PEDIDO);
     if (indexAtual <= 0) return;
-    const faseAnterior = FASES_ORDEM[indexAtual - 1];
-    atualizarStatus(pedido, faseAnterior, 'back');
+    processarMovimentacao(pedido, FASES_ORDEM[indexAtual - 1]);
   }
 
   async function atualizarStatus(pedido: Pedido, novaFase: string, direcao: 'forward' | 'back') {
@@ -133,7 +158,15 @@ export default function Dashboard() {
             const pedidosDaFase = pedidos.filter(p => p.STATUS_PEDIDO === fase.id);
 
             return (
-              <div key={fase.id} className="w-[320px] flex flex-col bg-gray-100/50 rounded-xl max-h-full border border-gray-200 shadow-sm">
+              <div 
+                key={fase.id} 
+                onDragOver={(e) => handleDragOver(e, fase.id)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, fase.id)}
+                className={`w-[320px] flex flex-col bg-gray-100/50 rounded-xl max-h-full border transition-all duration-200
+                  ${dragOverFase === fase.id ? 'border-dashed border-2 border-avivar-tiffany bg-teal-50/50' : 'border-gray-200 shadow-sm'}
+                `}
+              >
                 
                 {/* Título Coluna */}
                 <div className={`p-3 flex justify-between items-center border-b-2 rounded-t-xl ${fase.style}`}>
@@ -150,24 +183,43 @@ export default function Dashboard() {
                 <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
                   {pedidosDaFase.map((pedido) => (
                     
-                    <div key={pedido.ID_PEDIDO} className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-all group relative flex flex-col gap-2">
+                    <div 
+                      key={pedido.ID_PEDIDO} 
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, pedido.ID_PEDIDO)}
+                      className={`bg-white p-4 rounded-lg shadow-sm border hover:shadow-md transition-all group relative flex flex-col gap-2 cursor-grab active:cursor-grabbing
+                        ${draggedPedidoId === pedido.ID_PEDIDO ? 'opacity-50 ring-2 ring-avivar-tiffany scale-[0.98]' : 'border-gray-200'}
+                      `}
+                    >
                       
                       {/* Topo Card */}
-                      <div className="flex justify-between items-start">
+                      <div className="flex justify-between items-start mb-1">
                         <span className="text-[10px] font-bold bg-gray-50 text-gray-500 px-2 py-1 rounded border border-gray-200">
                           #{pedido.NUM_PEDIDO_PLATAFORMA || 'BALCÃO'}
                         </span>
-                        <span className="text-[10px] text-gray-400 font-medium">
-                          {new Date(pedido.DATA_PEDIDO).toLocaleDateString('pt-BR')}
-                        </span>
+                        <div className="flex flex-col items-end">
+                            <span className="text-[10px] text-gray-400 font-medium leading-none">
+                                Pedido: {new Date(pedido.DATA_PEDIDO).toLocaleDateString('pt-BR')}
+                            </span>
+                            {pedido.PRAZO_ENVIO && (
+                                <span className="text-[10px] font-bold text-red-500 bg-red-50 border border-red-100 px-1 rounded mt-1 leading-none py-0.5">
+                                    Prazo: {new Date(pedido.PRAZO_ENVIO).toLocaleDateString('pt-BR')}
+                                </span>
+                            )}
+                        </div>
                       </div>
 
                       {/* Cliente */}
                       <div className="flex items-center gap-2">
                         <User size={14} className="text-gray-400" />
-                        <h4 className="font-bold text-gray-800 text-sm line-clamp-1" title={pedido.NOME_CLIENTE}>
+                        <h4 className="font-bold text-gray-800 text-sm line-clamp-1 flex-1" title={pedido.NOME_CLIENTE}>
                           {pedido.NOME_CLIENTE}
                         </h4>
+                        {pedido.LINK_ARTE && (
+                            <a href={pedido.LINK_ARTE} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700 bg-blue-50 p-1 rounded-md border border-blue-100 shadow-sm" title="Abrir Arte no Drive" onClick={e => e.stopPropagation()}>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+                            </a>
+                        )}
                       </div>
 
                       {/* Destaque Responsável */}

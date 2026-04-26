@@ -1,5 +1,5 @@
 // src/components/ModalDetalhesProducao.tsx
-import { X, Calendar, User, Box, ArrowRight } from 'lucide-react';
+import { X, Calendar, User, Box } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import api from '../services/api';
 

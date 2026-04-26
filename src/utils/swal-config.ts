@@ -26,7 +26,10 @@ export const showAlert = (title: string, text: string, icon: 'success' | 'error'
 
 // Configuração para "Toasts" (Aquelas notificações rápidas no canto que somem sozinhas)
 // Perfeito para avisar "Login realizado" sem travar a tela
-export const showToast = (title: string, icon: 'success' | 'error' = 'success') => {
+export const showToast = (
+  title: string,
+  icon: 'success' | 'error' | 'warning' | 'info' = 'success'
+) => {
   const Toast = Swal.mixin({
     toast: true,
     position: 'top-end',

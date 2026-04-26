@@ -13,6 +13,8 @@ interface Produto {
   SKU_PRODUTO: string;
   NOME_PRODUTO: string;
   PRECO_VENDA: string | number;
+  IMPOSTO_PERCENTUAL?: number;
+  MAO_DE_OBRA_VALOR?: number;
 }
 
 export default function Produtos() {
@@ -23,6 +25,8 @@ export default function Produtos() {
   const [sku, setSku] = useState('');
   const [nome, setNome] = useState('');
   const [preco, setPreco] = useState('');
+  const [impostos, setImpostos] = useState('');
+  const [maoDeObra, setMaoDeObra] = useState('');
 
   // Modal
   const [modalFichaOpen, setModalFichaOpen] = useState(false);
@@ -53,11 +57,13 @@ export default function Produtos() {
         sku, 
         nome, 
         preco: parseFloat(preco), 
-        id_categoria: 1 
+        id_categoria: 1,
+        impostos: parseFloat(impostos || '0'),
+        mao_de_obra: parseFloat(maoDeObra || '0')
       });
       
       showToast('Produto cadastrado!');
-      setSku(''); setNome(''); setPreco('');
+      setSku(''); setNome(''); setPreco(''); setImpostos(''); setMaoDeObra('');
       carregarProdutos();
     } catch (error) {
       showAlert('Erro', 'Não foi possível salvar o produto.', 'error');
@@ -126,7 +132,7 @@ export default function Produtos() {
                 />
               </div>
 
-              <div className="md:col-span-5">
+              <div className="md:col-span-6">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Produto</label>
                 <input 
                   value={nome} 
@@ -136,8 +142,8 @@ export default function Produtos() {
                 />
               </div>
 
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Preço (R$)</label>
+              <div className="md:col-span-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Preço de Venda (R$)</label>
                 <input 
                   type="number" 
                   step="0.01" 
@@ -148,9 +154,33 @@ export default function Produtos() {
                 />
               </div>
 
-              <div className="md:col-span-2">
+              <div className="md:col-span-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Impostos (%)</label>
+                <input 
+                  type="number" 
+                  step="0.01" 
+                  value={impostos} 
+                  onChange={e => setImpostos(e.target.value)} 
+                  className="w-full border-gray-200 bg-gray-50 rounded-lg p-2.5 text-sm focus:border-avivar-tiffany focus:ring-2 focus:ring-avivar-tiffany/20 outline-none transition-all" 
+                  placeholder="Ex: 6.00" 
+                />
+              </div>
+
+              <div className="md:col-span-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mão de Obra (R$ fixo)</label>
+                <input 
+                  type="number" 
+                  step="0.01" 
+                  value={maoDeObra} 
+                  onChange={e => setMaoDeObra(e.target.value)} 
+                  className="w-full border-gray-200 bg-gray-50 rounded-lg p-2.5 text-sm focus:border-avivar-tiffany focus:ring-2 focus:ring-avivar-tiffany/20 outline-none transition-all" 
+                  placeholder="Ex: 2.50" 
+                />
+              </div>
+
+              <div className="md:col-span-4">
                 <button type="submit" className="w-full bg-avivar-tiffany text-white font-bold py-2.5 px-4 rounded-lg hover:bg-teal-600 transition-all shadow-sm hover:shadow flex items-center justify-center gap-2">
-                  <Plus size={18} /> Salvar
+                  <Plus size={18} /> Salvar Produto
                 </button>
               </div>
             </form>

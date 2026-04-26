@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../services/api'; // Sua instância do Axios
-import { UploadCloud, Trash2, FileText, Loader2, Eye, Image as ImageIcon } from 'lucide-react';
+import { UploadCloud, Trash2, FileText, Loader2, Eye } from 'lucide-react';
 import { showToast } from '../utils/swal-config'; // Seu utilitário de Toast
 
 // Interface alinhada com o que o Backend (MySQL) retorna

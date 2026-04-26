@@ -9,11 +9,12 @@ export default function Login() {
   
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  const [erro, setErro] = useState(''); // Mantive, embora o Swal seja melhor
+  const [erro, setErro] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function handleLogin(e: FormEvent) {
     e.preventDefault();
+    setErro('');
     setLoading(true);
 
     try {
@@ -32,12 +33,13 @@ export default function Login() {
 
       // Agora podemos usar o navigate normal, pois o Layout vai ler o localStorage atualizado ao montar
       setTimeout(() => {
-        navigate('/dashboard'); 
+        navigate('/home'); 
       }, 1000);
       
     } catch (error: any) {
       console.error(error);
       const msgErro = error.response?.data?.mensagem || 'Falha no login.';
+      setErro(msgErro);
       showAlert('Acesso Negado', msgErro, 'error');
     } finally {
       setLoading(false);

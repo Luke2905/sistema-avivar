@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate } from 'react-router-dom'; // Removi BrowserRouter daqui
+import { Routes, Route, Navigate } from 'react-router-dom';
+import Home from './pages/Home';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Produtos from './pages/Produtos';
@@ -12,11 +13,19 @@ import ProducaoGerar from './pages/ProducaoGerar';
 import Usuarios from './pages/Usuarios'
 import Financeiro from './pages/Financeiro';
 import Despesas from './pages/Despesas';
+import ConfiguracaoShopee from './pages/ConfiguracaoShopee';
+import FluxoCaixa from './pages/FluxoCaixa';
 
 // Guardião
 const RotaPrivada = () => {
   const token = localStorage.getItem('avivar_token');
   return token ? <Layout /> : <Navigate to="/" replace />;
+};
+
+// Guarda a rota após login para redirecionar
+const RotaDefault = () => {
+  const token = localStorage.getItem('avivar_token');
+  return token ? <Navigate to="/home" replace /> : <Navigate to="/" replace />;
 };
 
 function App() {
@@ -28,6 +37,7 @@ function App() {
         
         {/* Rotas Privadas (Protegidas pelo Guardião + Layout) */}
         <Route element={<RotaPrivada />}>
+            <Route path="/home" element={<Home />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/produtos" element={<Produtos />} />
             <Route path="/pedidos-lista" element={<PedidosLista />} />
@@ -39,10 +49,12 @@ function App() {
             <Route path="/scanner" element={<ProducaoScanner />} />
             <Route path="/ia" element={<Predicoes />} />
             <Route path="/usuarios" element={<Usuarios />} />
+            <Route path="/configuracoes/shopee" element={<ConfiguracaoShopee />} />
+            <Route path="/fluxo-caixa" element={<FluxoCaixa />} />
         </Route>
 
         {/* Fallback para rota inexistente */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<RotaDefault />} />
       </Routes>
   );
 }

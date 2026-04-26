@@ -1,7 +1,7 @@
 // src/config/menuItems.tsx
 import { 
   LayoutDashboard, ShoppingCart, Package, Boxes, ShoppingBag, 
-  BarChart3, BrainCircuit, ScanBarcode, Printer, Palette, DollarSign, Users, HandCoins
+  BrainCircuit, DollarSign, Users, HandCoins, Store, BarChart3, Home
 } from 'lucide-react';
 
 // USE SEM ACENTOS AQUI
@@ -17,31 +17,19 @@ export interface MenuItem {
 
 export const MENU_ITEMS: MenuItem[] = [
   { 
+    section: 'Principal',
+    label: 'Home', 
+    path: '/home', 
+    icon: Home, 
+    roles: ['ADMIN', 'PRODUCAO', 'ARTES', 'FINANCEIRO'] 
+  },
+  { 
     section: 'Operacional',
     label: 'Kanban', 
     path: '/dashboard', 
     icon: LayoutDashboard, 
     roles: ['ADMIN', 'PRODUCAO', 'ARTES', 'FINANCEIRO'] 
   },
-  // { 
-  //   label: 'Terminal (Bipe)', 
-  //   path: '/scanner', 
-  //   icon: ScanBarcode, 
-  //   roles: ['ADMIN', 'PRODUCAO'] 
-  // },
-  // { 
-  //   label: 'Central de OPs', 
-  //   path: '/pcp', 
-  //   icon: Printer, 
-  //   roles: ['ADMIN', 'PRODUCAO'] 
-  // },
-  // { 
-  //   section: 'Criação',
-  //   label: 'Arquivos de Arte', 
-  //   path: '/artes', 
-  //   icon: Palette, 
-  //   roles: ['ADMIN', 'ARTES'] 
-  // },
   { 
     section: 'Gestão',
     label: 'Pedidos', 
@@ -67,7 +55,7 @@ export const MENU_ITEMS: MenuItem[] = [
     icon: ShoppingBag, 
     roles: ['ADMIN', 'FINANCEIRO'] 
   },
-    { 
+  { 
     label: 'Despesas', 
     path: '/despesa', 
     icon: HandCoins, 
@@ -75,9 +63,15 @@ export const MENU_ITEMS: MenuItem[] = [
   },
   { 
     section: 'Estratégia',
-    label: 'Financeiro', 
+    label: 'DRE Financeiro', 
     path: '/financeiro', 
     icon: DollarSign, 
+    roles: ['ADMIN', 'FINANCEIRO'] 
+  },
+  { 
+    label: 'Fluxo de Caixa', 
+    path: '/fluxo-caixa', 
+    icon: BarChart3, 
     roles: ['ADMIN', 'FINANCEIRO'] 
   },
   { 
@@ -87,10 +81,16 @@ export const MENU_ITEMS: MenuItem[] = [
     roles: ['ADMIN', 'FINANCEIRO'] 
   },
   { 
-  section: 'Configurações',
-  label: 'Usuários', 
-  path: '/usuarios', 
-  icon: Users, // Importe o icone Users do lucide-react
-  roles: ['ADMIN'] 
-},
+    section: 'Configurações',
+    label: 'Usuários', 
+    path: '/usuarios', 
+    icon: Users,
+    roles: ['ADMIN'] 
+  },
+  { 
+    label: 'Integração Shopee', 
+    path: '/configuracoes/shopee', 
+    icon: Store,
+    roles: ['ADMIN'] 
+  },
 ];

@@ -1,5 +1,5 @@
 // src/components/ModalNovaCompra.tsx
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X, Save, ShoppingBag, DollarSign } from 'lucide-react';
 import api from '../services/api';
 import { showToast } from '../utils/swal-config';

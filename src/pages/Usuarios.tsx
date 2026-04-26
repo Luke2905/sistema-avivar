@@ -1,4 +1,5 @@
-import { useEffect, useState, FormEvent } from 'react';
+import { useEffect, useState } from 'react';
+import type { FormEvent } from 'react';
 import api from '../services/api'; // Seu axios configurado
 import { showToast, showAlert } from '../utils/swal-config'; // Suas configs de alerta
 import { Users, Edit, Trash2, Plus, CheckCircle, XCircle, Shield, X } from 'lucide-react';

@@ -5,7 +5,7 @@ import React from 'react';
 interface Item {
   ID_ITEM: number;
   QUANTIDADE: number;
-  VALOR_UNITARIO: string;
+  VALOR_UNITARIO: string | number;
   NOME_PRODUTO: string;
   SKU_PRODUTO: string;
 }
@@ -17,7 +17,7 @@ interface PedidoDetalhes {
     NUM_PEDIDO_PLATAFORMA: string;
     DATA_PEDIDO: string;
     STATUS_PEDIDO: string;
-    VALOR_TOTAL: string;
+    VALOR_TOTAL: string | number;
     PLATAFORMA_ORIGEM: string;
   };
   itens: Item[];

@@ -33,6 +33,10 @@ interface Props {
 }
 
 export default function ModalDetalhesPedido({ isOpen, dados, onClose }: Props) {
+  const usuarioSalvo = localStorage.getItem('avivar_user');
+  const user = usuarioSalvo ? JSON.parse(usuarioSalvo) : { perfil: '' };
+  const perfil = user.perfil ? user.perfil.toUpperCase() : '';
+  const isFinanceiroOculto = perfil === 'ARTES' || perfil === 'PRODUCAO';
   const componentRef = useRef<HTMLDivElement>(null); // Referência para o papel de impressão
 
   // Configuração da impressão
@@ -112,8 +116,8 @@ export default function ModalDetalhesPedido({ isOpen, dados, onClose }: Props) {
                   <tr>
                     <th className="p-3">Produto</th>
                     <th className="p-3 text-center">Qtd</th>
-                    <th className="p-3 text-right">Valor Unit.</th>
-                    <th className="p-3 text-right">Total</th>
+                    {!isFinanceiroOculto && <th className="p-3 text-right">Valor Unit.</th>}
+                    {!isFinanceiroOculto && <th className="p-3 text-right">Total</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -124,21 +128,32 @@ export default function ModalDetalhesPedido({ isOpen, dados, onClose }: Props) {
                         <p className="text-xs text-gray-400 font-mono">{item.SKU_PRODUTO}</p>
                       </td>
                       <td className="p-3 text-center">{item.QUANTIDADE}</td>
-                      <td className="p-3 text-right">
-                        {Number(item.VALOR_UNITARIO).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                      </td>
-                      <td className="p-3 text-right font-bold text-gray-700">
-                        {(Number(item.VALOR_UNITARIO) * item.QUANTIDADE).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                      </td>
+                      {!isFinanceiroOculto && (
+                        <td className="p-3 text-right">
+                          {Number(item.VALOR_UNITARIO).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </td>
+                      )}
+                      {!isFinanceiroOculto && (
+                        <td className="p-3 text-right font-bold text-gray-700">
+                          {(Number(item.VALOR_UNITARIO) * item.QUANTIDADE).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
                 <tfoot className="bg-gray-50">
                   <tr>
-                    <td colSpan={3} className="p-3 text-right font-bold text-gray-600">TOTAL DO PEDIDO:</td>
-                    <td className="p-3 text-right font-bold text-avivar-pink text-lg">
-                      {Number(pedido.VALOR_TOTAL).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                    </td>
+                    {!isFinanceiroOculto && (
+                      <>
+                        <td colSpan={3} className="p-3 text-right font-bold text-gray-600">TOTAL DO PEDIDO:</td>
+                        <td className="p-3 text-right font-bold text-avivar-pink text-lg">
+                          {Number(pedido.VALOR_TOTAL).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </td>
+                      </>
+                    )}
+                    {isFinanceiroOculto && (
+                      <td colSpan={2} className="p-3 text-right font-bold text-gray-400 italic">Informação Financeira Oculta</td>
+                    )}
                   </tr>
                 </tfoot>
               </table>

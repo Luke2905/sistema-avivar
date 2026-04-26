@@ -9,6 +9,8 @@ interface Produto {
   NOME_PRODUTO: string;
   SKU_PRODUTO: string;
   PRECO_VENDA: string | number; // Precisamos do preço atual para comparar
+  IMPOSTO_PERCENTUAL?: number;
+  MAO_DE_OBRA_VALOR?: number;
 }
 
 interface Materia {
@@ -90,12 +92,27 @@ export default function ModalFichaTecnica({ isOpen, onClose, produto }: Props) {
   // --- CÁLCULOS FINANCEIROS ---
   const custoMaterial = ficha.reduce((acc, item) => acc + (Number(item.QTD_CONSUMO) * Number(item.CUSTO_UNITARIO)), 0);
   
-  // Preço Sugerido = Custo + (Custo * Margem%)
-  const precoSugerido = custoMaterial * (1 + (margemDesejada / 100));
+  const impostoPct = Number(produto.IMPOSTO_PERCENTUAL || 0);
+  const maoDeObra = Number(produto.MAO_DE_OBRA_VALOR || 0);
+  const custoTotal = custoMaterial + maoDeObra;
+
+  // Calculando Preço Sugerido por Markup Divisor: PV = Custo / (1 - Taxas%)
+  // Taxas = Impostos + Margem de Lucro Desejada
+  const taxaTotal = (impostoPct + margemDesejada) / 100;
+  
+  let precoSugerido = 0;
+  if (taxaTotal >= 1) {
+    precoSugerido = custoTotal * (1 + taxaTotal); // Fallback se a margem for >= 100%
+  } else {
+    precoSugerido = custoTotal / (1 - taxaTotal);
+  }
   
   const precoAtual = Number(produto.PRECO_VENDA || 0);
-  const lucroReal = precoAtual - custoMaterial;
-  const margemReal = custoMaterial > 0 ? (lucroReal / custoMaterial) * 100 : 0;
+  const impostosPagos = precoAtual * (impostoPct / 100);
+  const lucroReal = precoAtual - custoTotal - impostosPagos;
+  
+  // Margem Real (%)
+  const margemReal = precoAtual > 0 ? (lucroReal / precoAtual) * 100 : 0;
   
   const isLucroRuim = precoAtual < precoSugerido;
 
@@ -179,9 +196,19 @@ export default function ModalFichaTecnica({ isOpen, onClose, produto }: Props) {
                 </table>
             </div>
 
-            <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center text-indigo-900">
-                <span className="text-sm font-bold uppercase flex items-center gap-2"><Calculator size={16}/> Custo Material:</span>
-                <span className="text-xl font-bold">R$ {custoMaterial.toFixed(2)}</span>
+            <div className="p-4 bg-gray-50 border-t border-gray-100 flex flex-col gap-2 text-indigo-900">
+                <div className="flex justify-between items-center w-full">
+                    <span className="text-sm uppercase flex items-center gap-2"><Calculator size={16}/> Custo Material:</span>
+                    <span className="text-sm font-bold">R$ {custoMaterial.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center w-full">
+                    <span className="text-sm uppercase flex items-center gap-2">Mão de Obra Fixa:</span>
+                    <span className="text-sm font-bold">R$ {maoDeObra.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center w-full pt-2 border-t border-gray-200">
+                    <span className="text-sm font-bold uppercase flex items-center gap-2">Custo Total de Produção:</span>
+                    <span className="text-lg font-bold">R$ {custoTotal.toFixed(2)}</span>
+                </div>
             </div>
         </div>
 
@@ -206,7 +233,17 @@ export default function ModalFichaTecnica({ isOpen, onClose, produto }: Props) {
                                 className="w-full border-2 border-slate-200 rounded p-2 font-bold text-center text-slate-700 focus:border-indigo-500 outline-none"
                             />
                         </div>
-                        <p className="text-[10px] text-gray-400 mt-1">Markup sobre custo material</p>
+                    </div>
+
+                    <div className="space-y-3">
+                        <div className="flex justify-between text-sm text-gray-500">
+                            <span>Impostos Configurados:</span>
+                            <span className="font-bold">{impostoPct}%</span>
+                        </div>
+                        <div className="flex justify-between text-sm text-gray-500">
+                            <span>Margem Desejada:</span>
+                            <span className="font-bold">{margemDesejada}%</span>
+                        </div>
                     </div>
 
                     <div className="border-t border-slate-200 my-4"></div>
