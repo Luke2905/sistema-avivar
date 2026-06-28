@@ -12,7 +12,8 @@ import {
   Eye,
   EyeOff,
   Loader2,
-  Info
+  Info,
+  PackageSearch
 } from 'lucide-react';
 import api from '../services/api';
 import { showToast } from '../utils/swal-config';
@@ -35,6 +36,7 @@ export default function ConfiguracaoShopee() {
   const [status, setStatus] = useState<ShopeeStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [sincronizando, setSincronizando] = useState(false);
+  const [sincronizandoProdutos, setSincronizandoProdutos] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [showKey, setShowKey] = useState(false);
 
@@ -116,6 +118,19 @@ export default function ConfiguracaoShopee() {
     }
   }
 
+  async function sincronizarProdutos() {
+    try {
+      setSincronizandoProdutos(true);
+      const res = await api.post('/shopee/sincronizar-produtos');
+      showToast(`✅ ${res.data.mensagem} — ${res.data.criados} novos, ${res.data.ignorados} já existiam.`, 'success');
+    } catch (error: any) {
+      const msg = error?.response?.data?.mensagem || 'Erro ao sincronizar catálogo';
+      showToast(msg, 'error');
+    } finally {
+      setSincronizandoProdutos(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -182,7 +197,7 @@ export default function ConfiguracaoShopee() {
         {/* Seção Sincronização */}
         <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
           <h3 className="font-bold text-gray-700 mb-4 flex items-center gap-2 text-lg">
-            <Zap className="text-orange-500" size={20} /> Sincronização de Pedidos
+            <Zap className="text-orange-500" size={20} /> Sincronização de Dados
           </h3>
 
           {!isReady && (
@@ -195,30 +210,57 @@ export default function ConfiguracaoShopee() {
             </div>
           )}
 
-          <div className="flex items-end gap-4">
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Buscar pedidos dos últimos</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min={1}
-                  max={15}
-                  value={form.dias_sync}
-                  onChange={e => setForm({ ...form, dias_sync: e.target.value })}
-                  className="w-20 border p-2 rounded-lg outline-none focus:border-orange-400 text-center font-bold"
-                />
-                <span className="text-gray-500 font-medium">dias</span>
-              </div>
-              <p className="text-[10px] text-gray-400 mt-1">Máx: 15 dias (limite da API Shopee)</p>
+          <div className="flex flex-col md:flex-row md:items-end gap-6 mt-4">
+            
+            {/* Sincronizar Pedidos */}
+            <div className="flex-1 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
+                    <ShoppingBag size={16} className="text-orange-500" /> Pedidos
+                </h4>
+                <div className="flex flex-wrap items-end gap-4">
+                    <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Buscar dos últimos</label>
+                    <div className="flex items-center gap-2">
+                        <input
+                        type="number"
+                        min={1}
+                        max={15}
+                        value={form.dias_sync}
+                        onChange={e => setForm({ ...form, dias_sync: e.target.value })}
+                        className="w-20 border p-2 rounded-lg outline-none focus:border-orange-400 text-center font-bold"
+                        />
+                        <span className="text-gray-500 font-medium">dias</span>
+                    </div>
+                    </div>
+                    <button
+                    onClick={sincronizar}
+                    disabled={sincronizando || !isReady}
+                    className="px-6 py-2 bg-orange-500 text-white font-bold rounded-lg hover:bg-orange-600 transition-colors shadow flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                    {sincronizando ? <Loader2 size={18} className="animate-spin" /> : <RefreshCw size={18} />}
+                    {sincronizando ? 'Sincronizando...' : 'Sincronizar Pedidos'}
+                    </button>
+                </div>
             </div>
-            <button
-              onClick={sincronizar}
-              disabled={sincronizando || !isReady}
-              className="px-6 py-2 bg-orange-500 text-white font-bold rounded-lg hover:bg-orange-600 transition-colors shadow flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {sincronizando ? <Loader2 size={18} className="animate-spin" /> : <RefreshCw size={18} />}
-              {sincronizando ? 'Sincronizando...' : 'Sincronizar Agora'}
-            </button>
+
+            {/* Sincronizar Catálogo */}
+            <div className="flex-1 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                 <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
+                    <PackageSearch size={16} className="text-orange-500" /> Catálogo de Produtos
+                </h4>
+                <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+                    Importa SKUs e nomes de produtos cadastrados na Shopee para o sistema Avivar (sem duplicar os existentes).
+                </p>
+                <button
+                    onClick={sincronizarProdutos}
+                    disabled={sincronizandoProdutos || !isReady}
+                    className="px-6 py-2 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-900 transition-colors shadow flex items-center justify-center gap-2 w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {sincronizandoProdutos ? <Loader2 size={18} className="animate-spin" /> : <PackageSearch size={18} />}
+                    {sincronizandoProdutos ? 'Buscando Produtos...' : 'Sincronizar SKUs da Shopee'}
+                </button>
+            </div>
+            
           </div>
         </div>
 

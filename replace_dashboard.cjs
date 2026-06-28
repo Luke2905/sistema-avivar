@@ -1,52 +1,194 @@
 const fs = require('fs');
 
-const path = 'src/pages/Dashboard.tsx';
-let content = fs.readFileSync(path, 'utf8');
+const file = 'src/pages/Dashboard.tsx';
+let content = fs.readFileSync(file, 'utf8');
 
+// Imports
 content = content.replace(
-    /RESPONSAVEL_PRODUCAO\?: string;\s*resumo_itens\?: string;\s*}/,
-    `RESPONSAVEL_PRODUCAO?: string;
-  resumo_itens?: string;
-  PRAZO_ENVIO?: string;
-  LINK_ARTE?: string;
-}`
+    "import ModalNovoPedido from '../components/ModalNovoPedido';",
+    "import ModalNovoPedido from '../components/ModalNovoPedido';\nimport ModalDetalhesPedido from '../components/ModalDetalhesPedido';\nimport { Search, Filter, Calendar } from 'lucide-react';"
 );
 
+// Pedido Interface
 content = content.replace(
-    /{\/\* Topo Card \*\/}\s*<div className="flex justify-between items-start">\s*<span className="text-\[10px\] font-bold bg-gray-50 text-gray-500 px-2 py-1 rounded border border-gray-200">\s*#\{pedido\.NUM_PEDIDO_PLATAFORMA \|\| 'BALCÃO'\}\s*<\/span>\s*<span className="text-\[10px\] text-gray-400 font-medium">\s*\{new Date\(pedido\.DATA_PEDIDO\)\.toLocaleDateString\('pt-BR'\)\}\s*<\/span>\s*<\/div>/,
-    `{/* Topo Card */}
-                      <div className="flex justify-between items-start mb-1">
-                        <span className="text-[10px] font-bold bg-gray-50 text-gray-500 px-2 py-1 rounded border border-gray-200">
-                          #{pedido.NUM_PEDIDO_PLATAFORMA || 'BALCÃO'}
-                        </span>
-                        <div className="flex flex-col items-end">
-                            <span className="text-[10px] text-gray-400 font-medium leading-none">
-                                Pedido: {new Date(pedido.DATA_PEDIDO).toLocaleDateString('pt-BR')}
-                            </span>
-                            {pedido.PRAZO_ENVIO && (
-                                <span className="text-[10px] font-bold text-red-500 bg-red-50 border border-red-100 px-1 rounded mt-1 leading-none py-0.5">
+    "LINK_ARTE?: string;\n}",
+    "LINK_ARTE?: string;\n  OBSERVACOES?: string;\n}"
+);
+
+// State vars
+content = content.replace(
+    "const [modalNovoOpen, setModalNovoOpen] = useState(false);",
+    `const [modalNovoOpen, setModalNovoOpen] = useState(false);
+  const [modalDetalhesOpen, setModalDetalhesOpen] = useState(false);
+  const [pedidoSelecionado, setPedidoSelecionado] = useState<any | null>(null);
+
+  // Filtros
+  const [busca, setBusca] = useState('');
+  const [filtroDia, setFiltroDia] = useState('');
+  const [filtroMes, setFiltroMes] = useState('');
+  const [filtroAno, setFiltroAno] = useState('');
+  const [filtroOrigem, setFiltroOrigem] = useState('');
+  const [filtroPrazoEnvio, setFiltroPrazoEnvio] = useState('');
+  const [showFiltros, setShowFiltros] = useState(false);`
+);
+
+// carregarPedidos query params
+content = content.replace(
+    "const response = await api.get('/pedidos');",
+    `const params: Record<string, string> = {};
+      if (filtroDia) params.dia = filtroDia;
+      if (filtroMes) params.mes = filtroMes;
+      if (filtroAno) params.ano = filtroAno;
+      if (filtroOrigem.trim()) params.origem = filtroOrigem.trim();
+      if (filtroPrazoEnvio) params.prazo_envio = filtroPrazoEnvio;
+
+      const response = await api.get('/pedidos', { params });`
+);
+
+// Filter application function
+if (!content.includes('const aplicarFiltros')) {
+    content = content.replace(
+        "// --- LÓGICA DE MOVIMENTAÇÃO INTELIGENTE E DRAG & DROP ---",
+        `const aplicarFiltros = () => { carregarPedidos(); };
+  
+  const limparFiltros = () => {
+    setFiltroDia(''); setFiltroMes(''); setFiltroAno(''); setFiltroOrigem(''); setFiltroPrazoEnvio(''); setBusca('');
+    setTimeout(() => carregarPedidos(), 100);
+  };
+
+  const abrirDetalhes = async (id: number) => {
+    try {
+      const res = await api.get(\`/pedidos/\${id}\`);
+      setPedidoSelecionado(res.data);
+      setModalDetalhesOpen(true);
+    } catch {
+      showToast('Erro ao abrir detalhes', 'error');
+    }
+  };
+
+  // --- LÓGICA DE MOVIMENTAÇÃO INTELIGENTE E DRAG & DROP ---`
+    );
+}
+
+// Filter the search bar over the results
+if (!content.includes('const pedidosFiltrados = pedidos.filter')) {
+    content = content.replace(
+        "return (\n    <div className=\"flex flex-col h-full bg-gray-50\">",
+        `const pedidosFiltrados = pedidos.filter((p) => {
+    const termo = busca.toLowerCase();
+    return (
+      (p.NOME_CLIENTE || '').toLowerCase().includes(termo) ||
+      (p.NUM_PEDIDO_PLATAFORMA || '').toLowerCase().includes(termo) ||
+      (p.resumo_itens || '').toLowerCase().includes(termo) ||
+      (p.OBSERVACOES || '').toLowerCase().includes(termo) ||
+      (p.PLATAFORMA_ORIGEM || '').toLowerCase().includes(termo)
+    );
+  });
+
+  return (
+    <div className="flex flex-col h-full bg-gray-50">`
+    );
+}
+
+// Render Filters UI
+content = content.replace(
+    "{/* KANBAN BOARD */}",
+    `{/* FILTROS (Colapsável) */}
+      <div className="bg-white border-b border-gray-200 px-8 py-3 flex flex-col gap-3 shrink-0">
+        <div className="flex justify-between items-center gap-4">
+            <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                <input
+                type="text"
+                placeholder="Buscar cliente, pedido, resumo, observação..."
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg outline-none focus:border-avivar-tiffany text-sm"
+                />
+            </div>
+            <button onClick={() => setShowFiltros(!showFiltros)} className="flex items-center gap-2 text-sm text-gray-600 hover:text-avivar-tiffany font-medium border border-gray-200 px-3 py-2 rounded-lg transition-colors">
+                <Filter size={16} /> Filtros {showFiltros ? 'Ocultar' : 'Avançados'}
+            </button>
+        </div>
+
+        {showFiltros && (
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 pt-2 border-t border-gray-100 animate-fadeIn">
+                <input type="date" value={filtroDia} onChange={(e) => setFiltroDia(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none" title="Dia" />
+                <select value={filtroMes} onChange={(e) => setFiltroMes(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none bg-white">
+                    <option value="">Mês</option>
+                    {['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'].map((mes, i) => <option key={i + 1} value={String(i + 1)}>{mes}</option>)}
+                </select>
+                <input type="number" placeholder="Ano" value={filtroAno} onChange={(e) => setFiltroAno(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none" />
+                <input type="text" placeholder="Origem" value={filtroOrigem} onChange={(e) => setFiltroOrigem(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none" />
+                <input type="date" value={filtroPrazoEnvio} onChange={(e) => setFiltroPrazoEnvio(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none" title="Prazo de Envio" />
+                
+                <div className="col-span-2 md:col-span-5 flex justify-end gap-2 mt-1">
+                    <button onClick={limparFiltros} className="px-4 py-1.5 text-xs font-bold text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50">Limpar</button>
+                    <button onClick={aplicarFiltros} className="px-4 py-1.5 text-xs font-bold bg-avivar-tiffany text-white rounded-lg hover:bg-teal-600 shadow-sm">Aplicar</button>
+                </div>
+            </div>
+        )}
+      </div>
+
+      {/* KANBAN BOARD */}`
+);
+
+// Map over filtered list instead of all orders
+content = content.replace(
+    'const pedidosDaFase = pedidos.filter(p => p.STATUS_PEDIDO === fase.id);',
+    'const pedidosDaFase = pedidosFiltrados.filter(p => p.STATUS_PEDIDO === fase.id);'
+);
+
+// Card modifications (Click to open, red badge, OBS)
+content = content.replace(
+    /className=\{\`bg-white p-4 rounded-lg shadow-sm border hover:shadow-md transition-all group relative flex flex-col gap-2 cursor-grab active:cursor-grabbing/g,
+    `onClick={() => abrirDetalhes(pedido.ID_PEDIDO)}
+                      className={\`bg-white p-4 rounded-lg shadow-sm border hover:shadow-md hover:border-avivar-tiffany transition-all group relative flex flex-col gap-2 cursor-grab active:cursor-grabbing`
+);
+
+// Red badge for PRAZO_ENVIO
+content = content.replace(
+    /\{pedido\.PRAZO_ENVIO && \(\s*<span className="text-\[10px\] font-bold text-red-500 bg-red-50 border border-red-100 px-1 rounded mt-1 leading-none py-0\.5">\s*Prazo: \{new Date\(pedido\.PRAZO_ENVIO\)\.toLocaleDateString\('pt-BR'\)\}\s*<\/span>\s*\)\}/g,
+    `{pedido.PRAZO_ENVIO && (
+                                <span className={\`text-[10px] font-bold px-1 rounded mt-1 leading-none py-0.5 border \${new Date(pedido.PRAZO_ENVIO) <= new Date() ? 'bg-red-500 text-white border-red-600 animate-pulse shadow-sm shadow-red-200' : 'text-orange-500 bg-orange-50 border-orange-100'}\`}>
                                     Prazo: {new Date(pedido.PRAZO_ENVIO).toLocaleDateString('pt-BR')}
                                 </span>
-                            )}
-                        </div>
-                      </div>`
+                            )}`
 );
 
+// Observacoes inside card (after Resumo Itens)
 content = content.replace(
-    /{\/\* Cliente \*\/}\s*<div className="flex items-center gap-2">\s*<User size=\{14\} className="text-gray-400" \/>\s*<h4 className="font-bold text-gray-800 text-sm line-clamp-1" title=\{pedido\.NOME_CLIENTE\}>\s*\{pedido\.NOME_CLIENTE\}\s*<\/h4>\s*<\/div>/,
-    `{/* Cliente */}
-                      <div className="flex items-center gap-2">
-                        <User size={14} className="text-gray-400" />
-                        <h4 className="font-bold text-gray-800 text-sm line-clamp-1 flex-1" title={pedido.NOME_CLIENTE}>
-                          {pedido.NOME_CLIENTE}
-                        </h4>
-                        {pedido.LINK_ARTE && (
-                            <a href={pedido.LINK_ARTE} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700 bg-blue-50 p-1 rounded-md border border-blue-100 shadow-sm" title="Abrir Arte no Drive" onClick={e => e.stopPropagation()}>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
-                            </a>
-                        )}
-                      </div>`
+    /<\/div>\s*\{\/\* Botões Ação \*\/\}/,
+    `</div>
+
+                      {/* Observações */}
+                      {pedido.OBSERVACOES && (
+                        <div className="bg-yellow-50/70 p-2 rounded border border-yellow-200/50 mt-1">
+                          <p className="text-[10px] text-yellow-800 font-medium line-clamp-2 leading-tight">
+                            <span className="font-bold mr-1">OBS:</span>
+                            {pedido.OBSERVACOES}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Botões Ação */}`
 );
 
-fs.writeFileSync(path, content);
-console.log('Done replacing in Dashboard.tsx');
+// Modal details inclusion
+content = content.replace(
+    /<ModalNovoPedido \s*isOpen=\{modalNovoOpen\} \s*onClose=\{\(\) => setModalNovoOpen\(false\)\} \s*onSuccess=\{carregarPedidos\} \s*\/>/g,
+    `<ModalNovoPedido 
+        isOpen={modalNovoOpen} 
+        onClose={() => setModalNovoOpen(false)}
+        onSuccess={carregarPedidos} 
+      />
+      <ModalDetalhesPedido
+        isOpen={modalDetalhesOpen}
+        dados={pedidoSelecionado}
+        onClose={() => setModalDetalhesOpen(false)}
+      />`
+);
+
+
+fs.writeFileSync(file, content, 'utf8');
+console.log('Dashboard replaced successfully');

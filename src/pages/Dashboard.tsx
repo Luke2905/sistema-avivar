@@ -3,6 +3,8 @@ import { RefreshCw, ArrowRight, ArrowLeft, Box, User } from 'lucide-react'; // �
 import api from '../services/api';
 import { showAlert, showToast } from '../utils/swal-config';
 import ModalNovoPedido from '../components/ModalNovoPedido';
+import ModalDetalhesPedido from '../components/ModalDetalhesPedido';
+import { Search, Filter, Calendar, Eye, AlertTriangle } from 'lucide-react';
 
 // Interface
 interface Pedido {
@@ -16,6 +18,7 @@ interface Pedido {
   resumo_itens?: string;
   PRAZO_ENVIO?: string;
   LINK_ARTE?: string;
+  OBSERVACOES?: string;
 }
 
 const FASES_ORDEM = ['ENTRADA', 'AGUARDANDO_ARTE', 'CRIACAO', 'IMPRIMINDO', 'PRODUCAO', 'ENVIADO', 'CANCELADO'];
@@ -33,17 +36,47 @@ export default function Dashboard() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalNovoOpen, setModalNovoOpen] = useState(false);
+  const [modalDetalhesOpen, setModalDetalhesOpen] = useState(false);
+  const [pedidoSelecionado, setPedidoSelecionado] = useState<any | null>(null);
+
+  // Filtros
+  const [busca, setBusca] = useState('');
+  const [filtroDia, setFiltroDia] = useState('');
+  const [filtroMes, setFiltroMes] = useState('');
+  const [filtroAno, setFiltroAno] = useState('');
+  const [filtroOrigem, setFiltroOrigem] = useState('');
+  const [filtroPrazoEnvio, setFiltroPrazoEnvio] = useState('');
+  const [showFiltros, setShowFiltros] = useState(false);
 
   // Estados Drag and Drop
   const [draggedPedidoId, setDraggedPedidoId] = useState<number | null>(null);
   const [dragOverFase, setDragOverFase] = useState<string | null>(null);
 
-  useEffect(() => { carregarPedidos(); }, []);
+  // Estoque Crítico
+  const [estoqueCritico, setEstoqueCritico] = useState<any[]>([]);
+
+  useEffect(() => { carregarPedidos(); carregarEstoque(); }, []);
+
+  async function carregarEstoque() {
+    try {
+      const res = await api.get('/estoque');
+      setEstoqueCritico(res.data.filter((m: any) => m.alerta_baixo === 1));
+    } catch (error) {
+      console.error(error);
+    }
+  }
 
   async function carregarPedidos() {
     try {
       setLoading(true);
-      const response = await api.get('/pedidos');
+      const params: Record<string, string> = {};
+      if (filtroDia) params.dia = filtroDia;
+      if (filtroMes) params.mes = filtroMes;
+      if (filtroAno) params.ano = filtroAno;
+      if (filtroOrigem.trim()) params.origem = filtroOrigem.trim();
+      if (filtroPrazoEnvio) params.prazo_envio = filtroPrazoEnvio;
+
+      const response = await api.get('/pedidos', { params });
       setPedidos(response.data);
     } catch (error) {
       console.error("Erro", error);
@@ -52,6 +85,23 @@ export default function Dashboard() {
       setLoading(false);
     }
   }
+
+  const aplicarFiltros = () => { carregarPedidos(); };
+  
+  const limparFiltros = () => {
+    setFiltroDia(''); setFiltroMes(''); setFiltroAno(''); setFiltroOrigem(''); setFiltroPrazoEnvio(''); setBusca('');
+    setTimeout(() => carregarPedidos(), 100);
+  };
+
+  const abrirDetalhes = async (id: number) => {
+    try {
+      const res = await api.get(`/pedidos/${id}`);
+      setPedidoSelecionado(res.data);
+      setModalDetalhesOpen(true);
+    } catch {
+      showToast('Erro ao abrir detalhes', 'error');
+    }
+  };
 
   // --- LÓGICA DE MOVIMENTAÇÃO INTELIGENTE E DRAG & DROP ---
 
@@ -135,6 +185,17 @@ export default function Dashboard() {
     }
   }
 
+  const pedidosFiltrados = pedidos.filter((p) => {
+    const termo = busca.toLowerCase();
+    return (
+      (p.NOME_CLIENTE || '').toLowerCase().includes(termo) ||
+      (p.NUM_PEDIDO_PLATAFORMA || '').toLowerCase().includes(termo) ||
+      (p.resumo_itens || '').toLowerCase().includes(termo) ||
+      (p.OBSERVACOES || '').toLowerCase().includes(termo) ||
+      (p.PLATAFORMA_ORIGEM || '').toLowerCase().includes(termo)
+    );
+  });
+
   return (
     <div className="flex flex-col h-full bg-gray-50">
       
@@ -145,17 +206,69 @@ export default function Dashboard() {
           <p className="text-xs text-gray-500">Acompanhamento de chão de fábrica</p>
         </div>
         <div className="flex gap-2">
-            <button onClick={carregarPedidos} className="p-2 text-gray-400 hover:text-avivar-tiffany hover:bg-gray-50 rounded-full transition-all">
+            <button onClick={() => { carregarPedidos(); carregarEstoque(); }} className="p-2 text-gray-400 hover:text-avivar-tiffany hover:bg-gray-50 rounded-full transition-all">
               <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
             </button>
         </div>
       </header>
 
+      {/* ALERTA DE ESTOQUE CRÍTICO */}
+      {estoqueCritico.length > 0 && (
+          <div className="bg-red-50 border-b border-red-200 px-8 py-2 flex items-center gap-3 animate-fadeIn">
+              <AlertTriangle size={18} className="text-red-500 shrink-0" />
+              <div className="flex-1 overflow-x-auto custom-scrollbar flex items-center gap-4 py-1">
+                  <span className="text-sm font-bold text-red-800 shrink-0">Estoque Baixo:</span>
+                  {estoqueCritico.map(m => (
+                      <span key={m.ID_MATERIA} className="text-xs bg-white text-red-600 px-2 py-0.5 rounded border border-red-100 whitespace-nowrap shadow-sm font-medium">
+                          {m.NOME_MATERIA} ({Number(m.SALDO_ESTOQUE)} {m.UNIDADE_MEDIDA})
+                      </span>
+                  ))}
+              </div>
+          </div>
+      )}
+
+      {/* FILTROS (Colapsável) */}
+      <div className="bg-white border-b border-gray-200 px-8 py-3 flex flex-col gap-3 shrink-0">
+        <div className="flex justify-between items-center gap-4">
+            <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                <input
+                type="text"
+                placeholder="Buscar cliente, pedido, resumo, observação..."
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg outline-none focus:border-avivar-tiffany text-sm"
+                />
+            </div>
+            <button onClick={() => setShowFiltros(!showFiltros)} className="flex items-center gap-2 text-sm text-gray-600 hover:text-avivar-tiffany font-medium border border-gray-200 px-3 py-2 rounded-lg transition-colors">
+                <Filter size={16} /> Filtros {showFiltros ? 'Ocultar' : 'Avançados'}
+            </button>
+        </div>
+
+        {showFiltros && (
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 pt-2 border-t border-gray-100 animate-fadeIn">
+                <input type="date" value={filtroDia} onChange={(e) => setFiltroDia(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none" title="Dia" />
+                <select value={filtroMes} onChange={(e) => setFiltroMes(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none bg-white">
+                    <option value="">Mês</option>
+                    {['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'].map((mes, i) => <option key={i + 1} value={String(i + 1)}>{mes}</option>)}
+                </select>
+                <input type="number" placeholder="Ano" value={filtroAno} onChange={(e) => setFiltroAno(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none" />
+                <input type="text" placeholder="Origem" value={filtroOrigem} onChange={(e) => setFiltroOrigem(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none" />
+                <input type="date" value={filtroPrazoEnvio} onChange={(e) => setFiltroPrazoEnvio(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none" title="Prazo de Envio" />
+                
+                <div className="col-span-2 md:col-span-5 flex justify-end gap-2 mt-1">
+                    <button onClick={limparFiltros} className="px-4 py-1.5 text-xs font-bold text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50">Limpar</button>
+                    <button onClick={aplicarFiltros} className="px-4 py-1.5 text-xs font-bold bg-avivar-tiffany text-white rounded-lg hover:bg-teal-600 shadow-sm">Aplicar</button>
+                </div>
+            </div>
+        )}
+      </div>
+
       {/* KANBAN BOARD */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden p-6 custom-scrollbar">
         <div className="flex gap-4 h-full min-w-max">
           {FASES_KANBAN.map((fase) => {
-            const pedidosDaFase = pedidos.filter(p => p.STATUS_PEDIDO === fase.id);
+            const pedidosDaFase = pedidosFiltrados.filter(p => p.STATUS_PEDIDO === fase.id);
 
             return (
               <div 
@@ -202,7 +315,7 @@ export default function Dashboard() {
                                 Pedido: {new Date(pedido.DATA_PEDIDO).toLocaleDateString('pt-BR')}
                             </span>
                             {pedido.PRAZO_ENVIO && (
-                                <span className="text-[10px] font-bold text-red-500 bg-red-50 border border-red-100 px-1 rounded mt-1 leading-none py-0.5">
+                                <span className={`text-[10px] font-bold px-1 rounded mt-1 leading-none py-0.5 border ${new Date(pedido.PRAZO_ENVIO) <= new Date() ? 'bg-red-500 text-white border-red-600 animate-pulse shadow-sm shadow-red-200' : 'text-orange-500 bg-orange-50 border-orange-100'}`}>
                                     Prazo: {new Date(pedido.PRAZO_ENVIO).toLocaleDateString('pt-BR')}
                                 </span>
                             )}
@@ -244,6 +357,16 @@ export default function Dashboard() {
                         </div>
                       </div>
 
+                      {/* Observações */}
+                      {pedido.OBSERVACOES && (
+                        <div className="bg-yellow-50/70 p-2 rounded border border-yellow-200/50 mt-1">
+                          <p className="text-[10px] text-yellow-800 font-medium line-clamp-2 leading-tight">
+                            <span className="font-bold mr-1">OBS:</span>
+                            {pedido.OBSERVACOES}
+                          </p>
+                        </div>
+                      )}
+
                       {/* Botões Ação */}
                       <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-50">
                         
@@ -258,6 +381,15 @@ export default function Dashboard() {
                                 </button>
                             )}
                         </div>
+
+                        {/* Detalhes (Olho) */}
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); abrirDetalhes(pedido.ID_PEDIDO); }}
+                            className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors shadow-sm border border-transparent hover:border-blue-100"
+                            title="Ver Detalhes do Pedido"
+                        >
+                            <Eye size={20} />
+                        </button>
 
                         {/* Avançar (Com lógica de baixa ao sair da produção) */}
                         <div className="h-8 w-8">
@@ -293,6 +425,11 @@ export default function Dashboard() {
         isOpen={modalNovoOpen} 
         onClose={() => setModalNovoOpen(false)}
         onSuccess={carregarPedidos} 
+      />
+      <ModalDetalhesPedido
+        isOpen={modalDetalhesOpen}
+        dados={pedidoSelecionado}
+        onClose={() => setModalDetalhesOpen(false)}
       />
     </div>
   );

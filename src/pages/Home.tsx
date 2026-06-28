@@ -15,10 +15,35 @@ import {
   Package,
   Boxes,
   ShoppingBag,
-  Store
+  Store,
+  Zap
 } from 'lucide-react';
 
 const CHANGELOG = [
+  {
+    versao: 'v2.7 — Shopee SKUs e Produtividade',
+    data: 'Jun 2026',
+    cor: 'from-blue-500 to-blue-700',
+    icone: Zap,
+    items: [
+      'Sincronização de catálogo e SKUs da Shopee direto para o sistema',
+      'Novos filtros avançados na tela de Kanban/Dashboard',
+      'Abertura de detalhes do pedido diretamente pelos cards do Kanban',
+      'Alteração rápida de status diretamente na tabela de Pedidos'
+    ]
+  },
+  {
+    versao: 'v2.6 — Precificação e Estoque (Fechamento MVP)',
+    data: 'Jun 2026',
+    cor: 'from-pink-400 to-pink-600',
+    icone: Sparkles,
+    items: [
+      'Simulador inteligente de preços na Ficha Técnica de Produtos',
+      'Análise automática de margem de lucro real x margem desejada',
+      'Sinalização visual (vermelha) para insumos abaixo do Estoque Mínimo',
+      'Faixa de alerta global na Dashboard avisando sobre estoques críticos',
+    ]
+  },
   {
     versao: 'v2.5 — Integração Shopee',
     data: 'Abr 2025',

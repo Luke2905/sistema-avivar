@@ -20,6 +20,7 @@ export default function ModalNovoPedido({ isOpen, onClose, onSuccess, pedidoPara
   const [plataforma, setPlataforma] = useState('Balcão');
   const [prazoEnvio, setPrazoEnvio] = useState('');
   const [linkArte, setLinkArte] = useState('');
+  const [observacoes, setObservacoes] = useState('');
   
   // Itens do Pedido
   const [itens, setItens] = useState<any[]>([]);
@@ -46,6 +47,7 @@ export default function ModalNovoPedido({ isOpen, onClose, onSuccess, pedidoPara
                 setPrazoEnvio('');
             }
             setLinkArte(p.LINK_ARTE || '');
+            setObservacoes(p.OBSERVACOES || '');
             
             // Mapeia os itens do banco para o formato do state local
             const itensFormatados = listaItens.map((item: any) => ({
@@ -71,6 +73,7 @@ export default function ModalNovoPedido({ isOpen, onClose, onSuccess, pedidoPara
     setPlataforma('Balcão');
     setPrazoEnvio('');
     setLinkArte('');
+    setObservacoes('');
     setItens([]);
     setBuscaProduto('');
     setProdutosEncontrados([]);
@@ -135,6 +138,7 @@ export default function ModalNovoPedido({ isOpen, onClose, onSuccess, pedidoPara
       plataforma: plataforma,
       prazo_envio: prazoEnvio || null,
       link_arte: linkArte || null,
+      observacoes: observacoes || null,
       valor_total: calcularTotalPedido(), // Recalcula no front só pra garantir, mas back deve validar
       itens: itens.map(i => ({
         id_produto: i.id_produto,
@@ -231,6 +235,14 @@ export default function ModalNovoPedido({ isOpen, onClose, onSuccess, pedidoPara
                 placeholder="https://drive.google.com/..."
               />
             </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-gray-500 mb-1">Observações do Pedido</label>
+            <textarea 
+              value={observacoes} onChange={e => setObservacoes(e.target.value)}
+              className="w-full border p-2 rounded-lg outline-none focus:border-avivar-tiffany resize-none h-20"
+              placeholder="Informações adicionais do cliente, detalhes da arte, etc..."
+            />
           </div>
 
           <hr className="border-gray-100" />
