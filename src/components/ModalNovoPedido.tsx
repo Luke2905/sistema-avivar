@@ -8,7 +8,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  pedidoParaEditar?: any | null; // <--- NOVA PROP (Opicional)
+  pedidoParaEditar?: any | null;
 }
 
 export default function ModalNovoPedido({ isOpen, onClose, onSuccess, pedidoParaEditar }: Props) {
@@ -21,6 +21,8 @@ export default function ModalNovoPedido({ isOpen, onClose, onSuccess, pedidoPara
   const [prazoEnvio, setPrazoEnvio] = useState('');
   const [linkArte, setLinkArte] = useState('');
   const [observacoes, setObservacoes] = useState('');
+  const [descontoValor, setDescontoValor] = useState('');
+  const [descontoTipo, setDescontoTipo] = useState<'valor' | 'percentual'>('valor');
   
   // Itens do Pedido
   const [itens, setItens] = useState<any[]>([]);
@@ -34,7 +36,7 @@ export default function ModalNovoPedido({ isOpen, onClose, onSuccess, pedidoPara
     if (isOpen) {
         if (pedidoParaEditar) {
             // Se veio dados, preenche tudo (Modo Edição)
-            const p = pedidoParaEditar.pedido; // O objeto vem { pedido: {...}, itens: [...] } do backend
+            const p = pedidoParaEditar.pedido;
             const listaItens = pedidoParaEditar.itens;
 
             setCliente(p.NOME_CLIENTE);
@@ -52,16 +54,20 @@ export default function ModalNovoPedido({ isOpen, onClose, onSuccess, pedidoPara
             // Mapeia os itens do banco para o formato do state local
             const itensFormatados = listaItens.map((item: any) => ({
                 id_produto: item.ID_PRODUTO,
-                nome: item.NOME_PRODUTO, // Precisamos garantir que o backend mande isso no detalhe
+                nome: item.NOME_PRODUTO,
                 sku: item.SKU_PRODUTO,
                 quantidade: item.QUANTIDADE,
                 valor_unitario: item.VALOR_UNITARIO,
                 total: item.QUANTIDADE * item.VALOR_UNITARIO
             }));
             setItens(itensFormatados);
+            
+            // Calcula o desconto, se houver
+            const somaItens = itensFormatados.reduce((acc: number, i: any) => acc + i.total, 0);
+            const desconto = Math.max(0, somaItens - Number(p.VALOR_TOTAL || 0));
+            setDescontoValor(desconto > 0 ? desconto.toString() : '');
 
         } else {
-            // Se não, limpa tudo (Modo Criação)
             limparForm();
         }
     }
@@ -74,6 +80,8 @@ export default function ModalNovoPedido({ isOpen, onClose, onSuccess, pedidoPara
     setPrazoEnvio('');
     setLinkArte('');
     setObservacoes('');
+    setDescontoValor('');
+    setDescontoTipo('valor');
     setItens([]);
     setBuscaProduto('');
     setProdutosEncontrados([]);
@@ -121,8 +129,19 @@ export default function ModalNovoPedido({ isOpen, onClose, onSuccess, pedidoPara
     setItens(novaLista);
   };
 
-  const calcularTotalPedido = () => {
+  const calcularTotalItens = () => {
     return itens.reduce((acc, item) => acc + item.total, 0);
+  };
+
+  const calcularDesconto = () => {
+    const subtotal = calcularTotalItens();
+    const val = Number(descontoValor || 0);
+    if (descontoTipo === 'percentual') return subtotal * (val / 100);
+    return val;
+  };
+
+  const calcularTotalPedido = () => {
+    return Math.max(0, calcularTotalItens() - calcularDesconto());
   };
 
   const handleSubmit = async () => {
@@ -132,6 +151,7 @@ export default function ModalNovoPedido({ isOpen, onClose, onSuccess, pedidoPara
     }
 
     setLoading(true);
+    const descontoFinal = calcularDesconto();
     const payload = {
       nome_cliente: cliente,
       num_pedido: numPedido,
@@ -139,7 +159,9 @@ export default function ModalNovoPedido({ isOpen, onClose, onSuccess, pedidoPara
       prazo_envio: prazoEnvio || null,
       link_arte: linkArte || null,
       observacoes: observacoes || null,
-      valor_total: calcularTotalPedido(), // Recalcula no front só pra garantir, mas back deve validar
+      valor_total: calcularTotalPedido(),
+      desconto_valor: descontoTipo === 'valor' ? descontoFinal : 0,
+      desconto_percentual: descontoTipo === 'percentual' ? Number(descontoValor || 0) : 0,
       itens: itens.map(i => ({
         id_produto: i.id_produto,
         quantidade: i.quantidade,
@@ -149,11 +171,9 @@ export default function ModalNovoPedido({ isOpen, onClose, onSuccess, pedidoPara
 
     try {
       if (pedidoParaEditar) {
-        // --- MODO EDIÇÃO (PUT) ---
         await api.put(`/pedidos/${pedidoParaEditar.pedido.ID_PEDIDO}`, payload);
         showToast('Pedido atualizado com sucesso!', 'success');
       } else {
-        // --- MODO CRIAÇÃO (POST) ---
         await api.post('/pedidos', payload);
         showToast('Pedido criado com sucesso!', 'success');
       }
@@ -175,15 +195,15 @@ export default function ModalNovoPedido({ isOpen, onClose, onSuccess, pedidoPara
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col animate-in fade-in zoom-in duration-200">
         
         {/* Header */}
-        <div className="flex justify-between items-center p-5 border-b border-gray-100 bg-gray-50 rounded-t-xl">
+        <div className="flex justify-between items-center p-5 border-b border-gray-100 bg-gray-50 rounded-t-xl shrink-0">
           <h2 className="text-xl font-bold text-gray-700">
             {pedidoParaEditar ? `Editar Pedido #${pedidoParaEditar.pedido.NUM_PEDIDO_PLATAFORMA}` : 'Novo Pedido'}
           </h2>
           <button onClick={onClose}><X className="text-gray-400 hover:text-red-500" /></button>
         </div>
 
-        {/* Body (Scrollável) */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        {/* Body (Scrollável) - Fix pro overflow esconder dropdown: removemos overflow-y-auto e colocamos num scroll dentro de um grid ou similar, mas pro modal é melhor usar position absolute pro dropdown ou manter assim e aumentar z-index */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 relative custom-scrollbar">
           
           {/* Dados Gerais */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -248,7 +268,7 @@ export default function ModalNovoPedido({ isOpen, onClose, onSuccess, pedidoPara
           <hr className="border-gray-100" />
 
           {/* Busca de Produtos */}
-          <div className="relative z-10">
+          <div className="relative z-50">
             <label className="block text-xs font-bold text-gray-500 mb-1">Adicionar Produtos</label>
             <div className="relative">
               <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
@@ -259,9 +279,9 @@ export default function ModalNovoPedido({ isOpen, onClose, onSuccess, pedidoPara
               />
             </div>
             
-            {/* Lista de Sugestões */}
+            {/* Lista de Sugestões - Agora com z-index alto pra não bugar no overflow do modal */}
             {produtosEncontrados.length > 0 && (
-              <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-lg shadow-xl mt-1 max-h-60 overflow-y-auto">
+              <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-lg shadow-xl mt-1 max-h-60 overflow-y-auto z-[9999]">
                 {produtosEncontrados.map(prod => (
                   <div 
                     key={prod.ID_PRODUTO} 
@@ -323,22 +343,70 @@ export default function ModalNovoPedido({ isOpen, onClose, onSuccess, pedidoPara
               </tbody>
             </table>
           </div>
-
+          
+          {/* Espaço em branco pra não encostar no footer e deixar o dropdown fluir, caso necessário */}
+          <div className="h-10"></div>
         </div>
 
         {/* Footer */}
-        <div className="p-5 border-t border-gray-100 bg-gray-50 rounded-b-xl flex justify-between items-center">
-          <div>
-            <span className="text-xs text-gray-500 uppercase font-bold block">Total do Pedido</span>
-            <span className="text-2xl font-bold text-avivar-tiffany">
-              {itens.reduce((acc, i) => acc + i.total, 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
-            </span>
+        <div className="p-5 border-t border-gray-100 bg-gray-50 rounded-b-xl flex flex-col md:flex-row justify-between items-center gap-4 shrink-0">
+          <div className="flex gap-6 items-center w-full md:w-auto">
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] text-gray-500 font-bold uppercase mb-1">Desconto</label>
+              {/* Toggle tipo de desconto */}
+              <div className="flex rounded-lg border border-gray-200 overflow-hidden mb-1">
+                <button
+                  type="button"
+                  onClick={() => setDescontoTipo('valor')}
+                  className={`px-3 py-1 text-xs font-bold transition-colors ${
+                    descontoTipo === 'valor' ? 'bg-red-500 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'
+                  }`}
+                >R$</button>
+                <button
+                  type="button"
+                  onClick={() => setDescontoTipo('percentual')}
+                  className={`px-3 py-1 text-xs font-bold transition-colors border-l border-gray-200 ${
+                    descontoTipo === 'percentual' ? 'bg-red-500 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'
+                  }`}
+                >%</button>
+              </div>
+              <div className="relative">
+                <input 
+                  type="number" step="0.01" min="0"
+                  value={descontoValor} 
+                  onChange={e => setDescontoValor(e.target.value)}
+                  className="w-28 border p-2 rounded-lg outline-none focus:border-avivar-tiffany text-sm text-red-600 font-bold bg-white pr-7"
+                  placeholder={descontoTipo === 'percentual' ? '0 %' : '0.00'}
+                />
+                <span className="absolute right-2 top-2.5 text-xs text-gray-400 font-bold">{descontoTipo === 'percentual' ? '%' : 'R$'}</span>
+              </div>
+            </div>
+            <div>
+              <span className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Subtotal</span>
+              <span className="text-lg font-bold text-gray-500 line-through decoration-gray-400">
+                {calcularTotalItens().toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+              </span>
+            </div>
+            {calcularDesconto() > 0 && (
+              <div>
+                <span className="text-[10px] text-red-500 uppercase font-bold block mb-1">Desconto</span>
+                <span className="text-sm font-bold text-red-500">
+                  -{calcularDesconto().toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+                </span>
+              </div>
+            )}
+            <div>
+              <span className="text-[10px] text-gray-500 uppercase font-bold block mb-1">Total Final</span>
+              <span className="text-2xl font-bold text-avivar-tiffany">
+                {calcularTotalPedido().toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+              </span>
+            </div>
           </div>
           
           <button 
             onClick={handleSubmit} 
             disabled={loading}
-            className="px-8 py-3 bg-gray-800 text-white rounded-lg font-bold hover:bg-black transition-colors flex items-center gap-2 shadow-lg disabled:opacity-50"
+            className="w-full md:w-auto px-8 py-3 bg-gray-800 text-white rounded-lg font-bold hover:bg-black transition-colors flex justify-center items-center gap-2 shadow-lg disabled:opacity-50"
           >
             {loading ? 'Salvando...' : <><Save size={18} /> {pedidoParaEditar ? 'Atualizar Pedido' : 'Finalizar Pedido'}</>}
           </button>

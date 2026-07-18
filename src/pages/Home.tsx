@@ -21,6 +21,18 @@ import {
 
 const CHANGELOG = [
   {
+    versao: 'v2.8 — Integração Shopee & Produtividade',
+    data: 'Jul 2026',
+    cor: 'from-orange-400 to-orange-600',
+    icone: Store,
+    items: [
+      'Sincronização oficial bidirecional com API da Shopee (Dashboard de API e Histórico)',
+      'Rotinas automáticas invisíveis (CRON) para importação de vendas e atualização de status',
+      'Kanban: Destaque visual inteligente de quantidades e cores de alerta para Prazos de Envio',
+      'Inserção manual de pedidos 100% remodelada com opção de Desconto (R$ ou %)'
+    ]
+  },
+  {
     versao: 'v2.7 — Shopee SKUs e Produtividade',
     data: 'Jun 2026',
     cor: 'from-blue-500 to-blue-700',

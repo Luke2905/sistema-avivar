@@ -1,8 +1,9 @@
 // src/config/menuItems.tsx
 import { 
   LayoutDashboard, ShoppingCart, Package, Boxes, ShoppingBag, 
-  BrainCircuit, DollarSign, Users, HandCoins, Store, BarChart3, Home
+  BrainCircuit, DollarSign, Users, HandCoins, Store, BarChart3, Home, Activity
 } from 'lucide-react';
+
 
 // USE SEM ACENTOS AQUI
 export type UserRole = 'ADMIN' | 'PRODUCAO' | 'ARTES' | 'FINANCEIRO';
@@ -93,4 +94,11 @@ export const MENU_ITEMS: MenuItem[] = [
     icon: Store,
     roles: ['ADMIN'] 
   },
+  { 
+    label: 'Sync Shopee', 
+    path: '/configuracoes/shopee-sync', 
+    icon: Activity,
+    roles: ['ADMIN'] 
+  },
 ];
+

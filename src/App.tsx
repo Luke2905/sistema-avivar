@@ -15,6 +15,8 @@ import Financeiro from './pages/Financeiro';
 import Despesas from './pages/Despesas';
 import ConfiguracaoShopee from './pages/ConfiguracaoShopee';
 import FluxoCaixa from './pages/FluxoCaixa';
+import SincronizacaoShopee from './pages/SincronizacaoShopee';
+
 
 // Guardião
 const RotaPrivada = () => {
@@ -50,7 +52,9 @@ function App() {
             <Route path="/ia" element={<Predicoes />} />
             <Route path="/usuarios" element={<Usuarios />} />
             <Route path="/configuracoes/shopee" element={<ConfiguracaoShopee />} />
+            <Route path="/configuracoes/shopee-sync" element={<SincronizacaoShopee />} />
             <Route path="/fluxo-caixa" element={<FluxoCaixa />} />
+
         </Route>
 
         {/* Fallback para rota inexistente */}

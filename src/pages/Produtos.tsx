@@ -1,7 +1,7 @@
 // src/pages/Produtos.tsx
 import { useState, useEffect } from 'react';
 import type { FormEvent } from 'react';
-import { Plus, Package, Trash2, FlaskConical, AlertCircle } from 'lucide-react';
+import { Plus, Package, Trash2, FlaskConical, AlertCircle, Edit3, X } from 'lucide-react';
 import api from '../services/api';
 import MySwal, { showToast, showAlert } from '../utils/swal-config';
 
@@ -22,6 +22,9 @@ export default function Produtos() {
   const [loading, setLoading] = useState(true);
 
   // Estados do Formulário
+  const [modoEdicao, setModoEdicao] = useState(false);
+  const [produtoEditandoId, setProdutoEditandoId] = useState<number | null>(null);
+
   const [sku, setSku] = useState('');
   const [nome, setNome] = useState('');
   const [preco, setPreco] = useState('');
@@ -48,25 +51,57 @@ export default function Produtos() {
     }
   }
 
+  const cancelarEdicao = () => {
+    setModoEdicao(false);
+    setProdutoEditandoId(null);
+    setSku('');
+    setNome('');
+    setPreco('');
+    setImpostos('');
+    setMaoDeObra('');
+  };
+
+  const handleEditar = (p: Produto) => {
+    setModoEdicao(true);
+    setProdutoEditandoId(p.ID_PRODUTO);
+    setSku(p.SKU_PRODUTO);
+    setNome(p.NOME_PRODUTO);
+    setPreco(String(p.PRECO_VENDA));
+    setImpostos(p.IMPOSTO_PERCENTUAL ? String(p.IMPOSTO_PERCENTUAL) : '');
+    setMaoDeObra(p.MAO_DE_OBRA_VALOR ? String(p.MAO_DE_OBRA_VALOR) : '');
+    
+    // Rola para o topo do form para a pessoa ver que está editando
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   async function handleSalvar(e: FormEvent) {
     e.preventDefault();
-    if (!sku || !nome || !preco) return showToast('Preencha os campos obrigatórios', 'error');
+    if (!sku || !nome || !preco) return showToast('Preencha SKU, Nome e Preço', 'error');
 
     try {
-      await api.post('/produtos', { 
+      const payload = { 
         sku, 
         nome, 
         preco: parseFloat(preco), 
-        id_categoria: 1,
+        id_categoria: 1, // Fixado como estava antes
         impostos: parseFloat(impostos || '0'),
         mao_de_obra: parseFloat(maoDeObra || '0')
-      });
+      };
+
+      if (modoEdicao && produtoEditandoId) {
+        await api.put(`/produtos/${produtoEditandoId}`, payload);
+        showToast('Produto atualizado!');
+      } else {
+        await api.post('/produtos', payload);
+        showToast('Produto cadastrado!');
+      }
       
-      showToast('Produto cadastrado!');
-      setSku(''); setNome(''); setPreco(''); setImpostos(''); setMaoDeObra('');
+      cancelarEdicao();
       carregarProdutos();
-    } catch (error) {
-      showAlert('Erro', 'Não foi possível salvar o produto.', 'error');
+    } catch (error: any) {
+      console.error(error);
+      const msg = error.response?.data?.mensagem || 'Não foi possível salvar o produto.';
+      showAlert('Erro', msg, 'error');
     }
   }
 
@@ -98,28 +133,35 @@ export default function Produtos() {
   };
 
   return (
-    // 1. ESTRUTURA TRAVADA (Igual Estoque)
     <div className="flex flex-col h-full bg-gray-50 overflow-hidden">
       
-      {/* 2. CABEÇALHO FIXO (shrink-0) */}
       <div className="flex-none p-8 pb-4">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
               <Package className="text-avivar-tiffany" /> Gestão de Produtos
             </h1>
-            <p className="text-sm text-gray-500 mt-1">Cadastre os itens de venda e configure suas receitas</p>
+            <p className="text-sm text-gray-500 mt-1">Cadastre os itens de venda, configure receitas, impostos e frete</p>
           </div>
         </div>
       </div>
 
-      {/* 3. ÁREA DE SCROLL (Formulário + Tabela rolam juntos) */}
       <div className="flex-1 overflow-y-auto min-h-0 p-8 pt-0 custom-scrollbar">
         <div className="max-w-6xl mx-auto space-y-8 pb-10">
         
           {/* --- FORMULÁRIO DE CADASTRO --- */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Adicionar Novo Item</h2>
+          <div className={`p-6 rounded-xl shadow-sm border transition-all ${modoEdicao ? 'bg-teal-50 border-avivar-tiffany' : 'bg-white border-gray-100'}`}>
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                    {modoEdicao ? <><Edit3 size={16} className="text-avivar-tiffany"/> Editando Produto</> : 'Adicionar Novo Item'}
+                </h2>
+                {modoEdicao && (
+                    <button onClick={cancelarEdicao} className="text-gray-500 hover:text-red-500 text-xs font-bold flex items-center gap-1 bg-white px-2 py-1 rounded border border-gray-200 shadow-sm">
+                        <X size={14} /> Cancelar Edição
+                    </button>
+                )}
+            </div>
+            
             <form onSubmit={handleSalvar} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
               
               <div className="md:col-span-3">
@@ -127,7 +169,7 @@ export default function Produtos() {
                 <input 
                   value={sku} 
                   onChange={e => setSku(e.target.value)} 
-                  className="w-full border-gray-200 bg-gray-50 rounded-lg p-2.5 text-sm focus:border-avivar-tiffany focus:ring-2 focus:ring-avivar-tiffany/20 outline-none transition-all" 
+                  className="w-full border-gray-200 bg-white rounded-lg p-2.5 text-sm focus:border-avivar-tiffany focus:ring-2 focus:ring-avivar-tiffany/20 outline-none transition-all shadow-sm border" 
                   placeholder="Ex: CAN-001" 
                 />
               </div>
@@ -137,20 +179,20 @@ export default function Produtos() {
                 <input 
                   value={nome} 
                   onChange={e => setNome(e.target.value)} 
-                  className="w-full border-gray-200 bg-gray-50 rounded-lg p-2.5 text-sm focus:border-avivar-tiffany focus:ring-2 focus:ring-avivar-tiffany/20 outline-none transition-all" 
+                  className="w-full border-gray-200 bg-white rounded-lg p-2.5 text-sm focus:border-avivar-tiffany focus:ring-2 focus:ring-avivar-tiffany/20 outline-none transition-all shadow-sm border" 
                   placeholder="Ex: Caneca Personalizada" 
                 />
               </div>
 
               <div className="md:col-span-3">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Preço de Venda (R$)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Preço Venda (R$)</label>
                 <input 
                   type="number" 
                   step="0.01" 
                   value={preco} 
                   onChange={e => setPreco(e.target.value)} 
-                  className="w-full border-gray-200 bg-gray-50 rounded-lg p-2.5 text-sm focus:border-avivar-tiffany focus:ring-2 focus:ring-avivar-tiffany/20 outline-none transition-all" 
-                  placeholder="0,00" 
+                  className="w-full border-gray-200 bg-white rounded-lg p-2.5 text-sm focus:border-avivar-tiffany focus:ring-2 focus:ring-avivar-tiffany/20 outline-none transition-all shadow-sm border" 
+                  placeholder="0.00" 
                 />
               </div>
 
@@ -161,26 +203,26 @@ export default function Produtos() {
                   step="0.01" 
                   value={impostos} 
                   onChange={e => setImpostos(e.target.value)} 
-                  className="w-full border-gray-200 bg-gray-50 rounded-lg p-2.5 text-sm focus:border-avivar-tiffany focus:ring-2 focus:ring-avivar-tiffany/20 outline-none transition-all" 
+                  className="w-full border-gray-200 bg-white rounded-lg p-2.5 text-sm focus:border-avivar-tiffany focus:ring-2 focus:ring-avivar-tiffany/20 outline-none transition-all shadow-sm border" 
                   placeholder="Ex: 6.00" 
                 />
               </div>
 
               <div className="md:col-span-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Mão de Obra (R$ fixo)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mão de Obra (R$)</label>
                 <input 
                   type="number" 
                   step="0.01" 
                   value={maoDeObra} 
                   onChange={e => setMaoDeObra(e.target.value)} 
-                  className="w-full border-gray-200 bg-gray-50 rounded-lg p-2.5 text-sm focus:border-avivar-tiffany focus:ring-2 focus:ring-avivar-tiffany/20 outline-none transition-all" 
+                  className="w-full border-gray-200 bg-white rounded-lg p-2.5 text-sm focus:border-avivar-tiffany focus:ring-2 focus:ring-avivar-tiffany/20 outline-none transition-all shadow-sm border" 
                   placeholder="Ex: 2.50" 
                 />
               </div>
 
               <div className="md:col-span-4">
-                <button type="submit" className="w-full bg-avivar-tiffany text-white font-bold py-2.5 px-4 rounded-lg hover:bg-teal-600 transition-all shadow-sm hover:shadow flex items-center justify-center gap-2">
-                  <Plus size={18} /> Salvar Produto
+                <button type="submit" className="w-full bg-avivar-tiffany text-white font-bold py-2.5 px-4 rounded-lg hover:bg-teal-600 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 border border-teal-600">
+                  {modoEdicao ? <><Edit3 size={18} /> Salvar Edição</> : <><Plus size={18} /> Cadastrar Produto</>}
                 </button>
               </div>
             </form>
@@ -199,7 +241,9 @@ export default function Produtos() {
                   <tr>
                     <th className="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">SKU</th>
                     <th className="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Produto</th>
-                    <th className="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Preço</th>
+                    <th className="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Mão de Obra</th>
+                    <th className="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Impostos</th>
+                    <th className="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Preço Venda</th>
                     <th className="py-4 px-6 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Ações</th>
                   </tr>
                 </thead>
@@ -212,6 +256,12 @@ export default function Produtos() {
                         </span>
                       </td>
                       <td className="py-4 px-6 text-sm font-medium text-gray-700">{p.NOME_PRODUTO}</td>
+                      <td className="py-4 px-6 text-sm text-gray-500 text-right">
+                        {p.MAO_DE_OBRA_VALOR ? Number(p.MAO_DE_OBRA_VALOR).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '-'}
+                      </td>
+                      <td className="py-4 px-6 text-sm text-gray-500 text-right">
+                        {p.IMPOSTO_PERCENTUAL ? `${Number(p.IMPOSTO_PERCENTUAL).toFixed(2)}%` : '-'}
+                      </td>
                       <td className="py-4 px-6 text-sm font-bold text-gray-800 text-right">
                         {Number(p.PRECO_VENDA).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                       </td>
@@ -222,16 +272,25 @@ export default function Produtos() {
                         {/* Botão Ficha Técnica */}
                         <button 
                           onClick={() => abrirFicha(p)} 
-                          className="text-indigo-400 hover:text-indigo-600 p-2 hover:bg-indigo-50 rounded-full transition-colors"
+                          className="text-indigo-400 hover:text-indigo-600 p-2 hover:bg-indigo-50 rounded-full transition-colors border border-transparent hover:border-indigo-100"
                           title="Configurar Ficha Técnica / Receita"
                         >
                           <FlaskConical size={18} />
                         </button>
 
+                        {/* Botão Editar */}
+                        <button 
+                          onClick={() => handleEditar(p)}
+                          className="text-amber-400 hover:text-amber-600 p-2 hover:bg-amber-50 rounded-full transition-colors border border-transparent hover:border-amber-100"
+                          title="Editar Produto"
+                        >
+                          <Edit3 size={18} />
+                        </button>
+
                         {/* Botão Excluir */}
                         <button 
                           onClick={() => handleExcluir(p.ID_PRODUTO, p.NOME_PRODUTO)}
-                          className="text-gray-300 hover:text-red-500 p-2 hover:bg-red-50 rounded-full transition-colors"
+                          className="text-gray-300 hover:text-red-500 p-2 hover:bg-red-50 rounded-full transition-colors border border-transparent hover:border-red-100"
                           title="Excluir Produto"
                         >
                           <Trash2 size={18} />
@@ -248,7 +307,6 @@ export default function Produtos() {
         </div>
       </div>
 
-      {/* MODAL (Fica fora do scroll) */}
       <ModalFichaTecnica 
         isOpen={modalFichaOpen}
         onClose={() => setModalFichaOpen(false)}
